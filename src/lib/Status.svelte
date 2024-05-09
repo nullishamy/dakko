@@ -33,6 +33,15 @@
 			hasBeenFavourited = true
 		})
 	}
+
+	let hasBeenBoosted = status.reblogged ?? false
+	const handleBoost = () => {
+		invoke('boost_status', {
+			statusId: reblog ? reblog.id : status.id
+		}).then(() => {
+			hasBeenBoosted = true
+		})
+	}
 </script>
 
 <div class={highlighted ? 'bg-surface0 p-2 rounded-md' : ' p-2'}>
@@ -86,7 +95,9 @@
 		<button on:click={toggleReply} class="border border-[0.5] px-1 border-pink rounded-lg">
 			Reply
 		</button>
-		<button class="border border-[0.5] px-1 border-pink rounded-lg">Boost</button>
+		<button on:click={handleBoost} class="border border-[0.5] px-1 border-pink rounded-lg">
+			{hasBeenBoosted ? 'Boosted' : 'Boost'}
+		</button>
 		<button on:click={handleFavourite} class="border border-[0.5] px-1 border-pink rounded-lg">
 			{hasBeenFavourited ? 'Favourited' : 'Favourite'}
 		</button>

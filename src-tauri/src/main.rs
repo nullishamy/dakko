@@ -119,6 +119,7 @@ fn main() {
             get_public_timeline,
             get_conversation,
             post_reply,
+            boost_status,
             post_status,
             favourite_status,
             get_local_timeline,
@@ -191,6 +192,15 @@ async fn favourite_status(status_id: String, state: tauri::State<'_, AppState>) 
 
     let client = state.client.lock();
     let res = client.favourite_status(status_id).await.unwrap();
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn boost_status(status_id: String, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let res = client.reblog_status(status_id).await.unwrap();
     Ok(res.json())
 }
 
