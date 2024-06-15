@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { formatDistanceStrict } from 'date-fns';
-	import type { Status } from './types';
+	import type { Account, Status } from './types';
 	import CompositionArea from './CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
+	import AccountView from './AccountView.svelte';
+	import RenderedContent from './RenderedContent.svelte';
 
 	export let onOpen: (status: Status) => void;
 	export let highlighted: boolean = false;
@@ -15,6 +17,11 @@
 	let replyOpen = false;
 	const toggleReply = () => {
 		replyOpen = !replyOpen;
+	};
+
+	let openedUser: Account | undefined
+	const onUserSelect = (user: Account) => {
+		openedUser = openedUser?.id == user.id ? undefined : user
 	};
 
 	const handleReply = (data: { content: string, cw: string | undefined }) => {
@@ -44,10 +51,15 @@
 	}
 </script>
 
-<div class={highlighted ? 'bg-surface0 p-2 rounded-md' : ' p-2'}>
+<div class={highlighted ? 'bg-surface0 p-2 rounded-md relative' : ' p-2 relative'}>
+	{#if openedUser}
+		<div class="absolute top-12 left-0 p-2 bg-mantle rounded-md z-10 min-w-full">
+			<AccountView account={openedUser}/>
+		</div>
+	{/if}
 	<div class="flex flex-row items-center justify-between">
 		<button
-			on:click={() => onOpen(status)}
+			on:click={() => onUserSelect(status.account)}
 			class="flex flex-row gap-2 items-center flex-wrap min-w-0"
 		>
 			{#if reblog}
@@ -73,17 +85,17 @@
 	</div>
 
 	{#if reblog}
-		<button on:click={() => onOpen(status)} class="flex flex-row gap-2 items-center">
+		<button on:click={() => onUserSelect(reblog.account)} class="flex flex-row gap-2 items-center">
 			<img class="rounded-md" height="30" width="30" src={reblog.account.avatar} />
 			<span>{reblog.account.display_name}</span>
 			<span class="text-sm">@{reblog.account.username}</span>
 		</button>
 		<button class="text-left" on:click={() => onOpen(status)}>
-			{@html reblog.content}
+			<RenderedContent htmlContent={reblog.content} emojis={reblog.emojis} />
 		</button>
 	{:else}
 		<button class="text-left" on:click={() => onOpen(status)}>
-			{@html status.content}
+			<RenderedContent htmlContent={status.content} emojis={status.emojis} />
 		</button>
 	{/if}
 

@@ -4,7 +4,7 @@
 	import CompositionArea from './CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 
-  const { account } = getContext<Context>(mainContext);
+  const { account, content } = getContext<Context>(mainContext);
   let composeOpen = false
 
   const toggleCompose = () => {
@@ -18,10 +18,17 @@
       toggleCompose()
     })
   }
+
+  const openOwnAccount = () => {
+    content.set({
+      type: 'user',
+      account: $account
+    })
+  }
 </script>
 
 <div class="flex flex-col gap-4 items-center justify-items-center h-full">
-  <div class="flex flex-col items-center mb-4">
+  <button on:click={openOwnAccount} class="flex flex-col items-center mb-4">
     <img
       src={$account?.avatar}
       alt="Avatar for {$account?.display_name}"
@@ -31,7 +38,7 @@
     />
     <span class="text-sm">{$account?.display_name ?? 'Your Display Name'}</span>
     <span class="text-sm">@{$account?.username ?? 'your-username'}</span>
-  </div>
+  </button>
 
   <div class="relative">
     <button on:click={toggleCompose}>Compose</button>

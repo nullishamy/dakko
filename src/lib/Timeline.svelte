@@ -4,7 +4,6 @@
 	import IntersectionObserver from 'svelte-intersection-observer';
 	import { ValidTimeline, type Status, type StatusContext } from './types';
 	import { capitalise } from './utils';
-	import Layout from '../routes/+layout.svelte';
 
 	export let timeline: ValidTimeline;
 
@@ -21,7 +20,6 @@
 	let openedStatus: Status | undefined;
 	let statusContext: StatusContext | undefined;
 	const handleStatusOpen = (status: Status) => {
-		
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {

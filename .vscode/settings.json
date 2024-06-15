@@ -1,4 +1,11 @@
 {
     "rust-analyzer.checkOnSave": false,
     "rust-analyzer.check.command": "check",
+    "presentation-mode.configBackup": {
+        "editor.fontSize": "undefined",
+        "terminal.integrated.fontSize": "undefined",
+        "editor.matchBrackets": "undefined",
+        "editor.minimap.enabled": "undefined",
+        "window.zoomLevel": "undefined"
+    },
 }
