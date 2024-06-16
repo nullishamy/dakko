@@ -18,6 +18,7 @@ use tauri::Manager;
 struct ClientState {
     client_id: String,
     client_secret: String,
+    base_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,18 +27,17 @@ struct AuthState {
 }
 
 struct AppState {
-    client: Mutex<Box<dyn Megalodon + Sync + Send>>,
     client_state: Mutex<Option<ClientState>>,
     auth_state: Mutex<Option<AuthState>>,
+    client: Mutex<Option<Box<dyn Megalodon + Sync + Send>>>,
 
-    base_url: String,
     redirect_addr: SocketAddr,
     config_dir: Mutex<Option<PathBuf>>,
 }
 
 impl AppState {
     fn has_logged_in(&self) -> bool {
-        self.auth_state.lock().is_some()
+        self.auth_state.lock().is_some() && self.client.lock().is_some()
     }
 }
 
@@ -46,32 +46,38 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let state = app.state::<AppState>();
 
     {
-        let path = config_dir.join("auth.json");
-        let file = File::open(path);
-        if let Ok(file) = file {
-            let auth_state = serde_json::from_reader::<_, AuthState>(file).unwrap();
-            let client = generator(
-                megalodon::SNS::Pleroma,
-                state.base_url.clone(),
-                Some(auth_state.token.access_token.clone()),
-                None,
-            );
-
-            // TODO: Use this to refresh the tokens once we want to do that
-            // tauri::async_runtime::block_on(async {
-            // });
-
-            *state.client.lock() = client;
-            *state.auth_state.lock() = Some(auth_state);
-
-        }
-    }
-
-    {
         let path = config_dir.join("client.json");
         let file = File::open(path);
         if let Ok(file) = file {
-            *state.client_state.lock() = Some(serde_json::from_reader(file).unwrap());
+            let client_state = serde_json::from_reader::<_, ClientState>(file).unwrap();
+            let url = client_state.base_url.clone();
+            *state.client_state.lock() = Some(client_state);
+
+            let mut client = generator(megalodon::SNS::Pleroma, url.clone(), None, None);
+
+            {
+                let path = config_dir.join("auth.json");
+                let file = File::open(path);
+                if let Ok(file) = file {
+                    let auth_state = serde_json::from_reader::<_, AuthState>(file).unwrap();
+                    client = generator(
+                        megalodon::SNS::Pleroma,
+                        url,
+                        Some(auth_state.token.access_token.clone()),
+                        None,
+                    );
+
+                    // TODO: Use this to refresh the tokens once we want to do that
+                    // tauri::async_runtime::block_on(async {
+                    // });
+
+                    *state.auth_state.lock() = Some(auth_state);
+                }
+            }
+
+            *state.client.lock() = Some(client);
+        } else {
+            eprintln!("No client.json found, cannot login");
         }
     }
 
@@ -104,16 +110,13 @@ fn save_state(state: &tauri::State<'_, AppState>) {
 }
 
 fn main() {
-    let url = "https://labyrinth.zone/";
-    let client = generator(megalodon::SNS::Pleroma, url.to_string(), None, None);
-
-    let context = tauri::generate_context!();
     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9119);
 
     tauri::Builder::default()
         .setup(setup)
         .invoke_handler(tauri::generate_handler![
             get_instance,
+            get_statuses,
             get_user,
             get_home_timeline,
             get_public_timeline,
@@ -125,31 +128,37 @@ fn main() {
             get_local_timeline,
             get_notifications,
             login,
-            is_logged_in
+            login_state,
+            set_instance
         ])
         .manage(AppState {
-            client: Mutex::new(client),
+            client: Mutex::new(None),
             client_state: Mutex::new(None),
             auth_state: Mutex::new(None),
             config_dir: Mutex::new(None),
-            base_url: url.to_string(),
             redirect_addr: socket_addr,
         })
-        .run(context)
+        .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct Content {
     content: String,
-    cw: Option<String>
+    cw: Option<String>,
 }
 
 #[tauri::command]
-async fn post_reply(post_id: String, reply: Content, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+async fn post_reply(
+    post_id: String,
+    reply: Content,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let sensitive = reply.cw.is_some();
     let options = megalodon::megalodon::PostStatusInputOptions {
         in_reply_to_id: Some(post_id),
@@ -158,7 +167,10 @@ async fn post_reply(post_id: String, reply: Content, state: tauri::State<'_, App
         ..Default::default()
     };
 
-    let res = client.post_status(reply.content, Some(&options)).await.unwrap();
+    let res = client
+        .post_status(reply.content, Some(&options))
+        .await
+        .unwrap();
     let output = res.json();
     match output {
         megalodon::megalodon::PostStatusOutput::Status(status) => Ok(status),
@@ -167,10 +179,15 @@ async fn post_reply(post_id: String, reply: Content, state: tauri::State<'_, App
 }
 
 #[tauri::command]
-async fn post_status(status: Content, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+async fn post_status(
+    status: Content,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let sensitive = status.cw.is_some();
     let options = megalodon::megalodon::PostStatusInputOptions {
         sensitive: Some(sensitive),
@@ -178,7 +195,10 @@ async fn post_status(status: Content, state: tauri::State<'_, AppState>) -> Resu
         ..Default::default()
     };
 
-    let res = client.post_status(status.content, Some(&options)).await.unwrap();
+    let res = client
+        .post_status(status.content, Some(&options))
+        .await
+        .unwrap();
     let output = res.json();
     match output {
         megalodon::megalodon::PostStatusOutput::Status(status) => Ok(status),
@@ -187,19 +207,51 @@ async fn post_status(status: Content, state: tauri::State<'_, AppState>) -> Resu
 }
 
 #[tauri::command]
-async fn favourite_status(status_id: String, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+async fn favourite_status(
+    status_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let res = client.favourite_status(status_id).await.unwrap();
     Ok(res.json())
 }
 
 #[tauri::command]
-async fn boost_status(status_id: String, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+async fn get_statuses(
+    account_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let options = megalodon::megalodon::GetAccountStatusesInputOptions {
+        limit: Some(25),
+        ..Default::default()
+    };
+
+    let res = client
+        .get_account_statuses(account_id, Some(&options))
+        .await
+        .unwrap();
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn boost_status(
+    status_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let res = client.reblog_status(status_id).await.unwrap();
     Ok(res.json())
 }
@@ -207,6 +259,8 @@ async fn boost_status(status_id: String, state: tauri::State<'_, AppState>) -> R
 #[tauri::command]
 async fn get_instance(state: tauri::State<'_, AppState>) -> Result<entities::Instance, ()> {
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let res = client.get_instance().await.unwrap();
     Ok(res.json())
 }
@@ -216,15 +270,21 @@ async fn get_user(state: tauri::State<'_, AppState>) -> Result<entities::Account
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let res = client.verify_account_credentials().await.unwrap();
     Ok(res.json())
 }
 
 #[tauri::command]
-async fn get_notifications(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Notification>, ()> {
+async fn get_notifications(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Notification>, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let options = megalodon::megalodon::GetNotificationsInputOptions {
         limit: Some(25),
         ..Default::default()
@@ -235,12 +295,17 @@ async fn get_notifications(state: tauri::State<'_, AppState>) -> Result<Vec<enti
 }
 
 #[tauri::command]
-async fn get_home_timeline(start_at: Option<String>, state: tauri::State<'_, AppState>) -> Result<Vec<entities::Status>, ()> {
+async fn get_home_timeline(
+    start_at: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let options = megalodon::megalodon::GetHomeTimelineInputOptions {
-        limit: Some(10),
+        limit: Some(25),
         max_id: start_at,
         ..Default::default()
     };
@@ -250,11 +315,16 @@ async fn get_home_timeline(start_at: Option<String>, state: tauri::State<'_, App
 }
 
 #[tauri::command]
-async fn get_public_timeline(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Status>, ()> {
+async fn get_public_timeline(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
+
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let options = megalodon::megalodon::GetPublicTimelineInputOptions {
-        limit: Some(10),
+        limit: Some(25),
         ..Default::default()
     };
 
@@ -263,25 +333,38 @@ async fn get_public_timeline(state: tauri::State<'_, AppState>) -> Result<Vec<en
 }
 
 #[tauri::command]
-async fn get_conversation(entry_point: String, state: tauri::State<'_, AppState>) -> Result<entities::Context, ()> {
+async fn get_conversation(
+    entry_point: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Context, ()> {
     assert!(state.has_logged_in());
+
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetStatusContextInputOptions {
-        limit: Some(10),
+        limit: Some(25),
         ..Default::default()
     };
 
-    let res = client.get_status_context(entry_point, Some(&options)).await.unwrap();
+    let res = client
+        .get_status_context(entry_point, Some(&options))
+        .await
+        .unwrap();
     Ok(res.json())
 }
 
 #[tauri::command]
-async fn get_local_timeline(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Status>, ()> {
+async fn get_local_timeline(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
+
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
     let options = megalodon::megalodon::GetLocalTimelineInputOptions {
-        limit: Some(10),
+        limit: Some(25),
         ..Default::default()
     };
 
@@ -290,8 +373,38 @@ async fn get_local_timeline(state: tauri::State<'_, AppState>) -> Result<Vec<ent
 }
 
 #[tauri::command]
-async fn is_logged_in(state: tauri::State<'_, AppState>) -> Result<bool, ()> {
-    Ok(state.has_logged_in())
+async fn set_instance(url: String, state: tauri::State<'_, AppState>) -> Result<(), ()> {
+    let mut client_state = state.client_state.lock();
+
+    let mut client = state.client.lock();
+
+    *client_state = Some(ClientState {
+        base_url: url.clone(),
+        client_id: "".to_string(),
+        client_secret: "".to_string()
+    });
+
+    *client = Some(generator(megalodon::SNS::Pleroma, url, None, None));
+
+    Ok(())
+}
+
+#[derive(Serialize)]
+enum LoginState {
+    LoggedIn,
+    InstanceUnknown,
+    LoginExpired,
+}
+
+#[tauri::command]
+async fn login_state(state: tauri::State<'_, AppState>) -> Result<LoginState, ()> {
+    if state.has_logged_in() {
+        Ok(LoginState::LoggedIn)
+    } else if state.client.lock().is_none() {
+        Ok(LoginState::InstanceUnknown)
+    } else {
+        Ok(LoginState::LoginExpired)
+    }
 }
 
 #[derive(Serialize)]
@@ -320,22 +433,28 @@ async fn login(
     };
 
     let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let mut client_state = state.client_state.lock();
+    let client_state = client_state.as_mut().unwrap();
+
     match client.register_app(String::from("dakko"), &options).await {
         Ok(app_data) => {
             let client_id = app_data.client_id;
             let client_secret = app_data.client_secret;
-            println!("Authorization URL is generated");
-            *state.client_state.lock() = Some(ClientState {
+            eprintln!("Authorization URL is generated {:#?}", app_data.url);
+            *client_state = ClientState {
                 client_id,
                 client_secret,
-            });
+                base_url: client_state.base_url.clone(),
+            };
 
             tauri::async_runtime::spawn(async move { run_server(handle).await });
 
             return Ok(AuthorizationURL(app_data.url.expect("url to be set")));
         }
         Err(err) => {
-            println!("{:#?}", err);
+            eprintln!("{:#?}", err);
         }
     }
 
@@ -352,7 +471,10 @@ async fn authorize(
     query: Query<CallbackQuery>,
 ) -> impl IntoResponse {
     let state = handle.state::<AppState>();
-    let mut client = state.client.lock();
+
+    let mut client_lock = state.client.lock();
+    let client = client_lock.as_mut().unwrap();
+
     let client_state_lock = state.client_state.lock();
     let client_state = client_state_lock.as_ref().unwrap();
 
@@ -373,11 +495,16 @@ async fn authorize(
         Ok(token_data) => {
             *client = generator(
                 megalodon::SNS::Pleroma,
-                state.base_url.clone(),
+                client_state.base_url.clone(),
                 Some(token_data.access_token.clone()),
                 None,
             );
             *state.auth_state.lock() = Some(AuthState { token: token_data });
+
+            // Drop our locks before save_state acquires them
+            drop(client_lock);
+            drop(client_state_lock);
+
             save_state(&state);
         }
         Err(err) => {
@@ -385,7 +512,7 @@ async fn authorize(
         }
     }
 
-    "authorised"
+    "authorised; reload dakko to boot up"
 }
 
 async fn run_server(handle: tauri::AppHandle) -> Result<(), axum::Error> {

@@ -170,6 +170,12 @@ export enum NotificationType {
   UNKNOWN = 'unknown'
 }
 
+export enum LoginStatus {
+  LOGGED_IN = 'LoggedIn',
+  INSTANCE_UNKNOWN = 'InstanceUnknown',
+  LOGIN_EXPIRED = 'LoginExpired'
+}
+
 export interface Notification {
   account: Account | undefined;
   created_at: string;

@@ -1,61 +1,77 @@
 <script lang="ts">
-  import { getContext } from 'svelte';
-  import { type Context, mainContext } from './context';
+	import { getContext } from 'svelte';
+	import { type Context, mainContext } from './context';
 	import CompositionArea from './CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
+	import { ValidTimeline } from './types';
 
-  const { account, content } = getContext<Context>(mainContext);
-  let composeOpen = false
+	const { account, content } = getContext<Context>(mainContext);
+	let composeOpen = false;
 
-  const toggleCompose = () => {
-    composeOpen = !composeOpen
-  }
+	const toggleCompose = () => {
+		composeOpen = !composeOpen;
+	};
 
-  const postStatus = (status: { content: string, cw: string | undefined }) => {
-    invoke('post_status', {
-      status
-    }).then(() => {
-      toggleCompose()
-    })
-  }
+	const postStatus = (status: { content: string; cw: string | undefined }) => {
+		invoke('post_status', {
+			status
+		}).then(() => {
+			toggleCompose();
+		});
+	};
 
-  const openOwnAccount = () => {
-    content.set({
-      type: 'user',
-      account: $account
-    })
-  }
+	const openOwnAccount = () => {
+		content.set({
+			type: 'user',
+			account: $account
+		});
+	};
+
+	const timelineOpener = (timeline: ValidTimeline) => {
+		return () => {
+			content.set({
+				type: 'timeline',
+				timeline
+			});
+		};
+	};
 </script>
 
 <div class="flex flex-col gap-4 items-center justify-items-center h-full">
-  <button on:click={openOwnAccount} class="flex flex-col items-center mb-4">
-    <img
-      src={$account?.avatar}
-      alt="Avatar for {$account?.display_name}"
-      width="100"
-      height="100"
-      class="bg-mantle rounded-md"
-    />
-    <span class="text-sm">{$account?.display_name ?? 'Your Display Name'}</span>
-    <span class="text-sm">@{$account?.username ?? 'your-username'}</span>
-  </button>
+	<button on:click={openOwnAccount} class="flex flex-col items-center mb-4">
+		<div class="w-[100px] h-[100px]">
+			<img
+				src={$account?.avatar}
+				alt="Avatar for {$account?.display_name}"
+				width="100"
+				height="100"
+				class="bg-mantle rounded-md"
+			/>
+		</div>
+		<span class="text-sm">{$account?.display_name ?? 'Your Display Name'}</span>
+		<span class="text-sm">@{$account?.username ?? 'your-username'}</span>
+	</button>
 
-  <div class="relative">
-    <button on:click={toggleCompose}>Compose</button>
-    {#if composeOpen}
-      <div class="absolute bg-mantle drop-shadow-md p-2">
-        <CompositionArea onPost={postStatus}/>
-      </div>
-    {/if}
-  </div>
+	<hr class="bg-pink h-0.5 w-4/5" />
+	<button on:click={timelineOpener(ValidTimeline.HOME)}>Timeline</button>
+	<hr class="bg-pink h-0.5 w-4/5" />
 
-  <span>Announcements</span>
-  <span>Follow requests</span>
-  <span>About</span>
+	<div class="relative">
+		<button on:click={toggleCompose}>Compose</button>
+		{#if composeOpen}
+			<div class="absolute bg-mantle drop-shadow-md p-2 z-10">
+				<CompositionArea onPost={postStatus} />
+			</div>
+		{/if}
+	</div>
 
-  <hr class="bg-pink h-0.5 w-4/5" />
+	<span>Announcements</span>
+	<span>Follow requests</span>
+	<span>About</span>
 
-  <div class="flex-grow" />
+	<hr class="bg-pink h-0.5 w-4/5" />
 
-  <span class="">Cog</span>
+	<div class="flex-grow" />
+
+	<span class="">Cog</span>
 </div>

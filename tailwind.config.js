@@ -8,7 +8,7 @@ export default {
   },
   plugins: [
     ctp({
-      defaultFlavour: 'latte'
+      defaultFlavour: 'mocha'
     })
   ],
 }

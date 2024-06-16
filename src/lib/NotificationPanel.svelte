@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invoke } from "@tauri-apps/api/tauri";
 	import NotificationComponent from "./Notification.svelte";
-  import { NotificationType, type Notification } from "./types";
+  import { type Notification } from "./types";
 
   let notifications: Notification[] = []
 
@@ -11,7 +11,7 @@
 </script>
 
 <h2 class="bg-mantle p-1 text-xl">Notifications</h2>
-<div class="mt-2 flex flex-col gap-2">
+<div class="mt-2 flex flex-col gap-2 p-2">
   {#each notifications as notification}
     <NotificationComponent {notification}/>
   {/each}

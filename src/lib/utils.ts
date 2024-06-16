@@ -1,3 +1,5 @@
+import type { Account } from "./types";
+
 export function capitalise(str: string): string {
   if (!str) {
     return ''
@@ -18,4 +20,9 @@ export function elipsise(text: string, maxLen: number): string {
   } 
 
   return text
+}
+
+export function fullyQualifiedAccount(account: Account): string {
+  const domain = new URL(account.url)
+  return `@${account.username}@${domain.host}`
 }

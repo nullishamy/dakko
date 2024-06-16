@@ -4,10 +4,15 @@
 	import IntersectionObserver from 'svelte-intersection-observer';
 	import { ValidTimeline, type Status, type StatusContext } from './types';
 	import { capitalise } from './utils';
+	import { getContext } from 'svelte';
+	import { type Context, mainContext } from './context';
+	import Icon from '@iconify/svelte';
 
 	export let timeline: ValidTimeline;
 
-	const fetchStatuses = (startAt?: string, append?: true, prepend?: true) => {
+	const { content } = getContext<Context>(mainContext)
+
+	const fetchStatuses = (startAt?: string, append?: true) => {
 		invoke(`get_${timeline}_timeline`, { startAt }).then((res) => {
 			if (append) {
 				statuses = [...statuses, ...(res as Status[])];
@@ -18,13 +23,22 @@
 	};
 
 	let openedStatus: Status | undefined;
-	let statusContext: StatusContext | undefined;
 	const handleStatusOpen = (status: Status) => {
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {
-			openedStatus = status;
-			statusContext = res as StatusContext;
+			content.set({
+				type: 'status',
+				openedId: status.reblog?.id ?? status.id,
+				status: status,
+				statusContext: res as StatusContext,
+				onReturn: () => {
+					content.set({
+						type: 'timeline',
+						timeline
+					})
+				}
+			});
 		});
 	};
 
@@ -41,7 +55,7 @@
 	let element: HTMLElement;
 </script>
 
-<div class="flex flex-row bg-mantle p-1 py-2 items-center justify-items-center gap-2">
+<div class="flex flex-row bg-mantle items-center justify-items-center gap-2 sticky top-0 z-10 px-2 py-1 rounded-md">
 	{#each timelines as maybeNewTimeline}
 		{#if timeline == maybeNewTimeline}
 			<h2 class="text-xl">{capitalise(timeline)}</h2>
@@ -63,41 +77,16 @@
 	<div class="grow" />
 	<button
 		on:click={() => {
+			statuses = [];
 			fetchStatuses();
-		}}>Refresh</button
+		}}><Icon icon='material-symbols:refresh-rounded' height="25" width="25" class="text-pink"/></button
 	>
 </div>
 
-<div class="mt-2 flex flex-col gap-2 m-1">
-	{#if openedStatus && statusContext}
-		<button
-			on:click={() => {
-				openedStatus = undefined;
-				statusContext = undefined;
-			}}>Back</button
-		>
-		{#each statusContext.ancestors as status}
-			<StatusComponent
-				{status}
-				highlighted={status.id === openedStatus.reblog?.id}
-				onOpen={handleStatusOpen}
-			/>
-		{/each}
-		{#if !openedStatus.reblog}
-			<StatusComponent status={openedStatus} highlighted onOpen={handleStatusOpen} />
-		{/if}
-		{#each statusContext.descendants as status}
-			<StatusComponent
-				{status}
-				highlighted={status.id === openedStatus.reblog?.id}
-				onOpen={handleStatusOpen}
-			/>
-		{/each}
-	{:else}
-		{#each statuses as status}
-			<StatusComponent {status} onOpen={handleStatusOpen} />
-		{/each}
-	{/if}
+<div class="mt-2 flex flex-col gap-4 m-1 px-2">
+	{#each statuses as status}
+		<StatusComponent {status} onOpen={handleStatusOpen} />
+	{/each}
 </div>
 
 {#if !openedStatus}
