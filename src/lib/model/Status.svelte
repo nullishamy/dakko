@@ -4,7 +4,7 @@
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import AccountView from './AccountView.svelte';
-	import RenderedContent from '$lib/RenderedContent.svelte';
+	import RenderedContent from '$lib/generic/RenderedContent.svelte';
 	import { getContext } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 	import Icon from '@iconify/svelte';

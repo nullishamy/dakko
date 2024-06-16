@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import RenderedContent from '$lib/RenderedContent.svelte';
+	import RenderedContent from '$lib/generic/RenderedContent.svelte';
 	import * as api from '$lib/api';
 	import { invoke } from '@tauri-apps/api';
 	import StatusComponent from './Status.svelte';

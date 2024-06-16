@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import * as api from '$lib/api';
 	import { invoke } from '@tauri-apps/api';
-	import Status from '$lib/Status.svelte';
+	import Status from '$lib/model/Status.svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 
 	let bookmarks: api.Status[] | undefined = undefined;

@@ -1,4 +1,4 @@
-import type { Account } from './types';
+import * as api from '$lib/api'
 
 export function capitalise(str: string): string {
 	if (!str) {
@@ -22,7 +22,7 @@ export function elipsise(text: string, maxLen: number): string {
 	return text;
 }
 
-export function fullyQualifiedAccount(account: Account): string {
+export function fullyQualifiedAccount(account: api.Account): string {
 	const domain = new URL(account.url);
 	return `@${account.username}@${domain.host}`;
 }

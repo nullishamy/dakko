@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatDistanceToNowStrict } from 'date-fns';
 	import * as api from '$lib/api';
-	import RenderedContent from '$lib/RenderedContent.svelte';
+	import RenderedContent from '$lib/generic/RenderedContent.svelte';
 	import Icon from '@iconify/svelte';
 	import { getContext } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';

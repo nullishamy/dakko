@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Bookmarks from '../Bookmarks.svelte';
+	import Bookmarks from '$lib/client-view/Bookmarks.svelte';
 	import FollowRequests from './FollowRequests.svelte';
 	import SettingsPanel from './SettingsPanel.svelte';
 	import type { ClientContent } from '../context';

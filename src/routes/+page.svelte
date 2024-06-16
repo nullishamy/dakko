@@ -1,7 +1,6 @@
 <script lang="ts">
-	import NotificationPanel from '$lib/NotificationPanel.svelte';
-	import Sidebar from '$lib/Sidebar.svelte';
-	import Timeline from '$lib/Timeline.svelte';
+	import NotificationPanel from '$lib/pane/NotificationPanel.svelte';
+	import Sidebar from '$lib/pane/Sidebar.svelte';
 	import { invoke } from '@tauri-apps/api';
 	import * as api from '$lib/api';
 	import {
