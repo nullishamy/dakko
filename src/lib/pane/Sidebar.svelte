@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { type MainContext, mainContext } from './context';
-	import CompositionArea from './CompositionArea.svelte';
+	import { type MainContext, mainContext } from '$lib/context';
+	import CompositionArea from '$lib/generic/CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { ValidTimeline } from './types';
+	import * as api from '$lib/api';
 	import Icon from '@iconify/svelte';
 
 	const { account, content } = getContext<MainContext>(mainContext);
@@ -28,7 +28,7 @@
 		});
 	};
 
-	const timelineOpener = (timeline: ValidTimeline) => {
+	const timelineOpener = (timeline: api.InstanceTimeline) => {
 		return () => {
 			content.set({
 				type: 'timeline',
@@ -79,7 +79,7 @@
 	</button>
 
 	<hr class="bg-accent h-0.5 w-4/5" />
-	<button on:click={timelineOpener(ValidTimeline.HOME)}>Timeline</button>
+	<button on:click={timelineOpener(api.InstanceTimeline.HOME)}>Timeline</button>
 	<hr class="bg-accent h-0.5 w-4/5" />
 
 	<div class="relative w-4/5">

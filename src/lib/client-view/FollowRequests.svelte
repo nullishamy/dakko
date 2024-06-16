@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api';
 	import { onMount } from 'svelte';
-	import type { FollowRequest } from './types';
+	import * as api from '$lib/api';
 
-	let requests: FollowRequest[] | undefined = undefined;
+	let requests: api.FollowRequest[] | undefined = undefined;
 
 	onMount(() => {
 		invoke('get_follow_requests').then((res) => {
-			requests = res as FollowRequest[];
+			requests = res as api.FollowRequest[];
 		});
 	});
 </script>

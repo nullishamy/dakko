@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { type SettingsContext, settingsContext, type Theme, type Accent } from './context';
+	import { type SettingsContext, settingsContext, type Theme, type Accent } from '$lib/context';
 	import Icon from '@iconify/svelte';
 
 	const { theme, accent } = getContext<SettingsContext>(settingsContext);

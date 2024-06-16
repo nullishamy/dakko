@@ -3,26 +3,22 @@
 	import Sidebar from '$lib/Sidebar.svelte';
 	import Timeline from '$lib/Timeline.svelte';
 	import { invoke } from '@tauri-apps/api';
-	import { LoginStatus, ValidTimeline, type Account, type Instance } from '$lib/types';
+	import * as api from '$lib/api';
 	import {
 		mainContext,
 		type MainContext,
 		type MainContent,
 		type SettingsContext,
 		settingsContext,
-
 		type Theme,
-
 		type Accent
-
-
 	} from '$lib/context';
 	import { onMount, setContext } from 'svelte';
 	import { writable } from 'svelte/store';
-	import MainContentComponent from '$lib/MainContent.svelte';
+	import MainContentComponent from '$lib/pane/MainContent.svelte';
 
-	const instance = writable<Instance>();
-	const account = writable<Account>();
+	const instance = writable<api.Instance>();
+	const account = writable<api.Account>();
 	const content = writable<MainContent>();
 
 	setContext<MainContext>(mainContext, {
@@ -41,7 +37,7 @@
 	document.body.classList.add(theme);
 	document.body.style.setProperty('--dakko-accent', `var(--ctp-${accent})`);
 
-	let loginState: LoginStatus | undefined = undefined;
+	let loginState: api.LoginStatus | undefined = undefined;
 
 	let authURL: string | undefined;
 	let instanceURL = 'https://labyrinth.zone';
@@ -62,15 +58,15 @@
 	onMount(() => {
 		invoke('login_state')
 			.then((res) => {
-				loginState = res as LoginStatus;
-				if (loginState == LoginStatus.LOGGED_IN) {
+				loginState = res as api.LoginStatus;
+				if (loginState == api.LoginStatus.LOGGED_IN) {
 					console.time('instance_fetch');
 					invoke('get_instance')
 						.then((res) => {
-							instance.set(res as Instance);
+							instance.set(res as api.Instance);
 							content.set({
 								type: 'timeline',
-								timeline: ValidTimeline.HOME,
+								timeline: api.InstanceTimeline.HOME,
 								cachedStatuses: []
 							});
 							// content.set({
@@ -83,7 +79,7 @@
 					console.time('user_fetch');
 					invoke('get_user')
 						.then((res) => {
-							account.set(res as Account);
+							account.set(res as api.Account);
 							// content.set({
 							// 	type: 'user',
 							// 	account: res as Account
@@ -101,7 +97,7 @@
 	}
 </script>
 
-{#if loginState == LoginStatus.LOGGED_IN}
+{#if loginState == api.LoginStatus.LOGGED_IN}
 	<div class="grid grid-cols-7 py-2 h-full overflow-hidden">
 		<section class="border-r-accent border-r-[1px] p-1">
 			<Sidebar />
@@ -111,11 +107,13 @@
 			<MainContentComponent />
 		</main>
 
-		<section class="col-span-2 border-l-accent border-l-[1px] px-2 overflow-y-scroll hide-scrollbar">
+		<section
+			class="col-span-2 border-l-accent border-l-[1px] px-2 overflow-y-scroll hide-scrollbar"
+		>
 			<NotificationPanel />
 		</section>
 	</div>
-{:else if loginState == LoginStatus.LOGIN_EXPIRED && authURL}
+{:else if loginState == api.LoginStatus.LOGIN_EXPIRED && authURL}
 	<button on:click={navigateToLoginPage}>Login</button>
 {:else}
 	<form on:submit={handleSubmit}>

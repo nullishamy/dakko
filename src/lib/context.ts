@@ -1,23 +1,23 @@
 import type { Writable } from 'svelte/store';
-import type { Account, Instance, Status, StatusContext, ValidTimeline } from './types';
+import * as api from '$lib/api';
 
 export interface TimelineContent {
 	type: 'timeline';
-	timeline: ValidTimeline;
-	cachedStatuses: Status[]
-	scrollToPostId?: string
+	timeline: api.InstanceTimeline;
+	cachedStatuses: api.Status[];
+	scrollToPostId?: string;
 }
 
 export interface UserContent {
 	type: 'user';
-	account: Account;
+	account: api.Account;
 }
 
 export interface StatusContent {
 	type: 'status';
 
-	status: Status;
-	statusContext: StatusContext;
+	status: api.Status;
+	statusContext: api.StatusContext;
 	openedId: string;
 	onReturn: () => void;
 }
@@ -34,30 +34,30 @@ export interface ClientContent {
 export type MainContent = TimelineContent | UserContent | NoContent | StatusContent | ClientContent;
 
 export interface MainContext {
-	instance: Writable<Instance>;
-	account: Writable<Account>;
+	instance: Writable<api.Instance>;
+	account: Writable<api.Account>;
 	content: Writable<MainContent>;
 }
 
 export const mainContext = {};
 
-export type Theme = "latte" | "frappe" | "macchiato" | "mocha";
+export type Theme = 'latte' | 'frappe' | 'macchiato' | 'mocha';
 
 export type Accent =
-  | "rosewater"
-  | "flamingo"
-  | "pink"
-  | "mauve"
-  | "red"
-  | "maroon"
-  | "peach"
-  | "yellow"
-  | "green"
-  | "teal"
-  | "sky"
-  | "sapphire"
-  | "blue"
-  | "lavender";
+	| 'rosewater'
+	| 'flamingo'
+	| 'pink'
+	| 'mauve'
+	| 'red'
+	| 'maroon'
+	| 'peach'
+	| 'yellow'
+	| 'green'
+	| 'teal'
+	| 'sky'
+	| 'sapphire'
+	| 'blue'
+	| 'lavender';
 
 export interface SettingsContext {
 	theme: Writable<Theme>;

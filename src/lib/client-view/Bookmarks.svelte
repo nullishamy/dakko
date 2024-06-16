@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import type { Status, StatusContext } from './types';
+	import * as api from '$lib/api';
 	import { invoke } from '@tauri-apps/api';
-	import StatusComponent from './Status.svelte';
-	import { type MainContext, mainContext, type StatusContent } from './context';
+	import Status from '$lib/Status.svelte';
+	import { type MainContext, mainContext } from '$lib/context';
 
-	let bookmarks: Status[] | undefined = undefined;
+	let bookmarks: api.Status[] | undefined = undefined;
 	const { content } = getContext<MainContext>(mainContext);
 
 	onMount(() => {
 		invoke('get_bookmarks').then((res) => {
-			bookmarks = res as Status[];
+			bookmarks = res as api.Status[];
 		});
 	});
 
-	const handleStatusOpen = (status: Status) => {
+	const handleStatusOpen = (status: api.Status) => {
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {
@@ -22,7 +22,7 @@
 				type: 'status',
 				openedId: status.reblog?.id ?? status.id,
 				status: status,
-				statusContext: res as StatusContext,
+				statusContext: res as api.StatusContext,
 				onReturn: () => {
 					content.set({
 						type: 'client',
@@ -41,7 +41,7 @@
 		<span>No bookmarks found</span>
 	{:else}
 		{#each bookmarks as bookmark}
-			<StatusComponent
+			<Status
 				status={bookmark}
 				onOpen={handleStatusOpen}
 			/>

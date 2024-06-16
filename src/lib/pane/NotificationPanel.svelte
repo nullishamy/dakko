@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
-	import NotificationComponent from './Notification.svelte';
-	import { type Notification } from './types';
+	import Notification from '$lib/model/Notification.svelte';
+	import * as api from '$lib/api';
 	import { onMount } from 'svelte';
 
-	let notifications: Notification[] = [];
+	let notifications: api.Notification[] = [];
 
 	onMount(() => {
 		invoke('get_notifications').then((res) => {
-			notifications = res as Notification[];
+			notifications = res as api.Notification[];
 		});
 	});
 
@@ -19,11 +19,11 @@
 				since: lastId
 			}).then((res) => {
 				console.log('Fetching notifications from', lastId, res)
-				notifications = [...(res as Notification[]), ...notifications];
+				notifications = [...(res as api.Notification[]), ...notifications];
 			});
 		} else {
 			invoke('get_notifications').then((res) => {
-				notifications = res as Notification[];
+				notifications = res as api.Notification[];
 			});
 		}
 	}, 15_000);
@@ -35,6 +35,6 @@
 		<span>Loading...</span>
 	{/if}
 	{#each notifications as notification}
-		<NotificationComponent {notification} />
+		<Notification {notification} />
 	{/each}
 </div>

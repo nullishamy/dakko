@@ -2,17 +2,17 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import StatusComponent from './Status.svelte';
 	import IntersectionObserver from 'svelte-intersection-observer';
-	import { ValidTimeline, type Status, type StatusContext } from './types';
-	import { capitalise } from './utils';
+	import * as api from '$lib/api';
+	import { capitalise } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
-	import { type MainContext, mainContext } from './context';
+	import { type MainContext, mainContext } from '$lib/context';
 	import Icon from '@iconify/svelte';
 
-	export let timeline: ValidTimeline;
+	export let timeline: api.InstanceTimeline;
 
 	const { content } = getContext<MainContext>(mainContext);
 
-	const replyMap = new Map<string, Status>();
+	const replyMap = new Map<string, api.Status>();
 
 	export let scrollToPostId: string | undefined;
 
@@ -20,14 +20,14 @@
 
 	const fetchStatuses = (startAt?: string, append?: true, limit = 10) => {
 		invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
-			const res = _res as Status[];
+			const res = _res as api.Status[];
 			const replyData = Promise.allSettled(
 				res
 					.filter((r) => r.in_reply_to_id !== null)
 					.map(async (r) => {
 						const reply = (await invoke('get_status', {
 							id: r.in_reply_to_id
-						})) as Status;
+						})) as api.Status;
 
 						replyMap.set(r.id, reply);
 					})
@@ -43,8 +43,8 @@
 		});
 	};
 
-	let openedStatus: Status | undefined;
-	const handleStatusOpen = (status: Status) => {
+	let openedStatus: api.Status | undefined;
+	const handleStatusOpen = (status: api.Status) => {
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {
@@ -52,7 +52,7 @@
 				type: 'status',
 				openedId: status.reblog?.id ?? status.id,
 				status: status,
-				statusContext: res as StatusContext,
+				statusContext: res as api.StatusContext,
 				onReturn: () => {
 					content.set({
 						type: 'timeline',
@@ -65,7 +65,7 @@
 		});
 	};
 
-	export let statuses: Status[] = [];
+	export let statuses: api.Status[] = [];
 	onMount(() => {
 		if (!statuses.length) {
 			fetchStatuses();
@@ -77,11 +77,11 @@
 		// })
 	});
 
-	const timelines: ValidTimeline[] = [
-		ValidTimeline.HOME,
-		ValidTimeline.PUBLIC,
-		ValidTimeline.BUBBLE,
-		ValidTimeline.KNOWN
+	const timelines: api.InstanceTimeline[] = [
+		api.InstanceTimeline.HOME,
+		api.InstanceTimeline.PUBLIC,
+		api.InstanceTimeline.BUBBLE,
+		api.InstanceTimeline.KNOWN
 	];
 
 	let element: HTMLElement;

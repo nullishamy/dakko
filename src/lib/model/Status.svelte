@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { formatDistanceStrict } from 'date-fns';
-	import type { Account, Status } from './types';
-	import CompositionArea from './CompositionArea.svelte';
+	import * as api  from '$lib/api';
+	import CompositionArea from '$lib/generic/CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import AccountView from './AccountView.svelte';
-	import RenderedContent from './RenderedContent.svelte';
+	import RenderedContent from '$lib/RenderedContent.svelte';
 	import { getContext } from 'svelte';
-	import { type MainContext, mainContext } from './context';
+	import { type MainContext, mainContext } from '$lib/context';
 	import Icon from '@iconify/svelte';
-	import { fullyQualifiedAccount } from './utils';
+	import { fullyQualifiedAccount } from '$lib/utils';
 
-	export let onOpen: (status: Status) => void;
+	export let onOpen: (status: api.Status) => void;
 	export let highlighted: boolean = false;
 
-	export let status: Status;
-	export let replyTo: Status | undefined = undefined;
+	export let status: api.Status;
+	export let replyTo: api.Status | undefined = undefined;
 	export let container: Element | undefined = undefined;
 	const reblog = status.reblog;
 
@@ -31,8 +31,8 @@
 		burgerOpen = !burgerOpen;
 	};
 
-	let openedUser: Account | undefined;
-	const onUserSelect = (user: Account) => {
+	let openedUser: api.Account | undefined;
+	const onUserSelect = (user: api.Account) => {
 		openedUser = openedUser?.id == user.id ? undefined : user;
 	};
 

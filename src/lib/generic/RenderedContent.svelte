@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Emoji } from './types';
+	import * as api from '$lib/api';
 
 	export let htmlContent: string;
-	export let emojis: Emoji[];
+	export let emojis: api.Emoji[];
 
 	function textNodesToSpan(elements: Element | ChildNode[], recursive: boolean) {
 		recursive = recursive || true;

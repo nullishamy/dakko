@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import RenderedContent from './RenderedContent.svelte';
-	import type { Account, Relationship, Status, StatusContext } from './types';
+	import RenderedContent from '$lib/RenderedContent.svelte';
+	import * as api from '$lib/api';
 	import { invoke } from '@tauri-apps/api';
 	import StatusComponent from './Status.svelte';
 	import Icon from '@iconify/svelte';
-	import { type MainContext, mainContext } from './context';
+	import { type MainContext, mainContext } from '$lib/context';
 
-	export let account: Account;
+	export let account: api.Account;
 	export let isCondensed = false;
 
 	export let onClose = () => {};
-	export let onOpen = (account: Account) => {};
+	export let onOpen = (account: api.Account) => {};
 
-	const openStatus = (status: Status) => {
+	const openStatus = (status: api.Status) => {
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {
@@ -21,7 +21,7 @@
 				type: 'status',
 				openedId: status.reblog?.id ?? status.id,
 				status: status,
-				statusContext: res as StatusContext,
+				statusContext: res as api.StatusContext,
 				onReturn: () => {
 					content.set({
 						type: 'user',
@@ -34,8 +34,8 @@
 
 	const { content } = getContext<MainContext>(mainContext);
 
-	let accountStatuses: Status[] = [];
-	let relationship: Relationship = {
+	let accountStatuses: api.Status[] = [];
+	let relationship: api.Relationship = {
 		id: '',
 		following: false,
 		followed_by: false,
@@ -55,28 +55,28 @@
 		invoke('get_statuses', {
 			accountId: account.id
 		}).then((res) => {
-			accountStatuses = res as Status[];
+			accountStatuses = res as api.Status[];
 		});
 
 		invoke('get_relationships', {
 			accountIds: [account.id]
 		}).then((res) => {
-			relationship = (res as unknown[])[0] as Relationship;
+			relationship = (res as unknown[])[0] as api.Relationship;
 		});
 	});
 
-	const toggleFollow = (account: Account) => {
+	const toggleFollow = (account: api.Account) => {
 		if (relationship.following) {
 			invoke('unfollow_user', {
 				id: account.id
 			}).then((res) => {
-				relationship = res as Relationship;
+				relationship = res as api.Relationship;
 			});
 		} else {
 			invoke('follow_user', {
 				id: account.id
 			}).then((res) => {
-				relationship = res as Relationship;
+				relationship = res as api.Relationship;
 			});
 		}
 	};

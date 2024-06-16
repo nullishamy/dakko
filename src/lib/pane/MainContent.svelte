@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { type MainContext, mainContext, type StatusContent } from './context';
-	import Timeline from './Timeline.svelte';
-	import AccountView from './AccountView.svelte';
-	import StatusComponent from './Status.svelte';
-	import { ValidTimeline, type Status, type StatusContext } from './types';
+	import { type MainContext, mainContext, type StatusContent } from '$lib/context';
+	import Timeline from '$lib/model/Timeline.svelte';
+	import AccountView from '$lib/model/AccountView.svelte';
+	import Status from '$lib/model/Status.svelte';
+	import * as api from '$lib/api';
 	import { invoke } from '@tauri-apps/api';
-	import ClientContent from './ClientContent.svelte';
+	import ClientContent from '../client-view/ClientContent.svelte';
 
 	const { content } = getContext<MainContext>(mainContext);
-	const handleStatusOpen = (status: Status) => {
+	const handleStatusOpen = (status: api.Status) => {
 		invoke('get_conversation', {
 			entryPoint: status.id
 		}).then((res) => {
@@ -17,7 +17,7 @@
 				type: 'status',
 				openedId: status.reblog?.id ?? status.id,
 				status: status,
-				statusContext: res as StatusContext,
+				statusContext: res as api.StatusContext,
 				onReturn: ($content as StatusContent).onReturn
 			});
 		});
@@ -31,21 +31,21 @@
 {:else if $content?.type == 'status'}
 	<button on:click={$content.onReturn}>Back</button>
 	{#each $content.statusContext.ancestors as status}
-		<StatusComponent
+		<Status
 			{status}
 			highlighted={status.id === $content.openedId}
 			onOpen={handleStatusOpen}
 		/>
 	{/each}
 	{#if !$content.status.reblog}
-		<StatusComponent
+		<Status
 			status={$content.status}
 			highlighted
 			onOpen={handleStatusOpen}
 		/>
 	{/if}
 	{#each $content.statusContext.descendants as status}
-		<StatusComponent
+		<Status
 			{status}
 			highlighted={status.id === $content.openedId}
 			onOpen={handleStatusOpen}
