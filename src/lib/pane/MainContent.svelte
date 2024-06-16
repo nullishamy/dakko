@@ -27,7 +27,11 @@
 {#if $content?.type == 'user'}
 	<AccountView account={$content.account} />
 {:else if $content?.type == 'timeline'}
-	<Timeline timeline={$content.timeline} statuses={$content.cachedStatuses} scrollToPostId={$content.scrollToPostId}/>
+	<Timeline
+		timeline={$content.timeline}
+		statuses={$content.cachedStatuses}
+		scrollToPostId={$content.scrollToPostId}
+	/>
 {:else if $content?.type == 'status'}
 	<button on:click={$content.onReturn}>Back</button>
 	{#each $content.statusContext.ancestors as status}

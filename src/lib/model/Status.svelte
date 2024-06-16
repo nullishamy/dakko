@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatDistanceStrict } from 'date-fns';
-	import * as api  from '$lib/api';
+	import * as api from '$lib/api';
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import AccountView from './AccountView.svelte';
@@ -37,10 +37,10 @@
 	};
 
 	let hasBeenBookmarked = reblog?.bookmarked ?? status.bookmarked ?? false;
-  console.log(reblog)
-  console.log(status)
+	console.log(reblog);
+	console.log(status);
 	const handleBookmark = () => {
-    console.log('haseen', hasBeenBookmarked)
+		console.log('haseen', hasBeenBookmarked);
 
 		if (hasBeenBookmarked) {
 			invoke('unbookmark_status', {
@@ -377,9 +377,7 @@
 			/>
 
 			{#if burgerOpen}
-				<div
-					class="absolute bottom-6 bg-mantle border border-accent px-4 py-2 rounded-md"
-				>
+				<div class="absolute bottom-6 bg-mantle border border-accent px-4 py-2 rounded-md">
 					<button
 						class="flex flex-row items-center gap-2"
 						on:click={handleBookmark}

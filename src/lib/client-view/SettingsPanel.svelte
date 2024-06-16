@@ -64,20 +64,20 @@
 				Select accent (current: {$accent}) <Icon icon="mdi:keyboard-arrow-down" />
 			</option>
 
-			 <option value="rosewater">Rosewater</option>
-			 <option value="flamingo">Flamingo</option>
-			 <option value="pink">Pink</option>
-			 <option value="mauve">Mauve</option>
-			 <option value="red">Red</option>
-			 <option value="maroon">Maroon</option>
-			 <option value="peach">Peach</option>
-			 <option value="yellow">Yellow</option>
-			 <option value="green">Green</option>
-			 <option value="teal">Teal</option>
-			 <option value="sky">Sky</option>
-			 <option value="sapphire">Sapphire</option>
-			 <option value="blue">Blue</option>
-			 <option value="lavender">Lavender</option>
+			<option value="rosewater">Rosewater</option>
+			<option value="flamingo">Flamingo</option>
+			<option value="pink">Pink</option>
+			<option value="mauve">Mauve</option>
+			<option value="red">Red</option>
+			<option value="maroon">Maroon</option>
+			<option value="peach">Peach</option>
+			<option value="yellow">Yellow</option>
+			<option value="green">Green</option>
+			<option value="teal">Teal</option>
+			<option value="sky">Sky</option>
+			<option value="sapphire">Sapphire</option>
+			<option value="blue">Blue</option>
+			<option value="lavender">Lavender</option>
 		</select>
 	</div>
 </section>

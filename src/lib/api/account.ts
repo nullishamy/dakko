@@ -1,4 +1,4 @@
-import type { Emoji } from "./content";
+import type { Emoji } from './content';
 
 export interface AccountField {
 	name: string;

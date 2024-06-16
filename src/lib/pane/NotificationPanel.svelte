@@ -18,7 +18,7 @@
 			invoke('get_notifications', {
 				since: lastId
 			}).then((res) => {
-				console.log('Fetching notifications from', lastId, res)
+				console.log('Fetching notifications from', lastId, res);
 				notifications = [...(res as api.Notification[]), ...notifications];
 			});
 		} else {

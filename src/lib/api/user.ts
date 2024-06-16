@@ -1,5 +1,5 @@
-import type { Account } from "./account";
-import type { Status } from "./content";
+import type { Account } from './account';
+import type { Status } from './content';
 
 export interface Relationship {
 	id: string;
@@ -17,7 +17,6 @@ export interface Relationship {
 	// Friendica returns null as note.
 	note: string | undefined;
 }
-
 
 export enum NotificationType {
 	FOLLOW = 'follow',

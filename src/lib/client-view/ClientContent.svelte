@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Bookmarks from '../Bookmarks.svelte';
-import FollowRequests from './FollowRequests.svelte';
+	import FollowRequests from './FollowRequests.svelte';
 	import SettingsPanel from './SettingsPanel.svelte';
 	import type { ClientContent } from '../context';
 

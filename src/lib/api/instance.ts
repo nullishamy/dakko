@@ -1,4 +1,3 @@
-
 export enum InstanceTimeline {
 	HOME = 'home',
 	PUBLIC = 'public',

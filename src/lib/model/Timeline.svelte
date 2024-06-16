@@ -132,7 +132,10 @@
 			onOpen={handleStatusOpen}
 		/>
 		{#if status.id == scrollToPostId}
-			<div bind:this={scrollTo} class="w-full bg-blue h-1"/>
+			<div
+				bind:this={scrollTo}
+				class="w-full bg-blue h-1"
+			/>
 		{/if}
 		{#if i == statuses.length - 5}
 			<div
