@@ -11,20 +11,23 @@
 	import RenderedContent from './RenderedContent.svelte';
 	import Icon from '@iconify/svelte';
 	import { getContext } from 'svelte';
-	import { type Context, mainContext } from './context';
+	import { type MainContext, mainContext } from './context';
 	import { invoke } from '@tauri-apps/api';
 	import { fullyQualifiedAccount } from './utils';
+
 	export let notification: Notification;
 
-	const { content } = getContext<Context>(mainContext);
+	const { content } = getContext<MainContext>(mainContext);
 
-	const { type, account, created_at, status } = notification;
+	const { type, account, created_at, status, target } = notification;
 	const createdAt = new Date(created_at);
 	const showAccount = [
 		NotificationType.POLL_EXPIRED,
 		NotificationType.FOLLOW,
 		NotificationType.REBLOG,
-		NotificationType.FAVOURITE
+		NotificationType.FAVOURITE,
+		NotificationType.MENTION,
+		NotificationType.MOVE
 	].includes(type);
 
 	const handleOpenStatus = (status: Status) => {
@@ -40,19 +43,38 @@
 				onReturn: () => {
 					content.set({
 						type: 'timeline',
-						timeline: ValidTimeline.HOME
+						timeline: ValidTimeline.HOME,
+						cachedStatuses: []
 					});
 				}
 			});
+		});
+	};
+
+	const openAccount = (account: Account) => {
+		console.log('notification', account);
+		content.set({
+			type: 'user',
+			account
 		});
 	};
 </script>
 
 <div class="flex flex-row flex-wrap items-center">
 	{#if showAccount && account}
-		<img src={account?.avatar} width="35" height="35" class="rounded-full mr-2" />
+		<button on:click={() => openAccount(account)}>
+			<img
+				src={account?.avatar}
+				width="35"
+				height="35"
+				class="rounded-full mr-2"
+			/>
+		</button>
 		<span>
-			<RenderedContent htmlContent={account?.display_name ?? ''} emojis={account?.emojis ?? []} />
+			<RenderedContent
+				htmlContent={account?.display_name ?? ''}
+				emojis={account?.emojis ?? []}
+			/>
 			<span class="text-blue">
 				{fullyQualifiedAccount(account)}
 			</span>
@@ -60,8 +82,15 @@
 		<div class="grow" />
 		<span>{formatDistanceToNowStrict(createdAt, { addSuffix: true })}</span>
 		{#if status}
-			<button class="text-blue ml-2" on:click={() => handleOpenStatus(status)}>
-				<Icon width="20" height="20" icon="material-symbols:link" />
+			<button
+				class="text-blue ml-2"
+				on:click={() => handleOpenStatus(status)}
+			>
+				<Icon
+					width="20"
+					height="20"
+					icon="material-symbols:link"
+				/>
 			</button>
 		{/if}
 	{/if}
@@ -71,18 +100,36 @@
 	<span class="text-sm">poll has ended</span>
 {:else if type === NotificationType.FOLLOW}
 	<span class="text-sm">followed you</span>
-{:else if type === NotificationType.REBLOG}
+{:else if type === NotificationType.MOVE && target}
+	<span class="text-sm">
+		migrated to <span class="text-blue">{fullyQualifiedAccount(target)}</span>
+	</span>
+{:else if type === NotificationType.REBLOG && status}
 	<span class="text-sm">boosted your post</span>
-	<span class="text-xs"
-		><RenderedContent htmlContent={status?.content ?? ''} emojis={status?.emojis ?? []} /></span
-	>
-{:else if type === NotificationType.FAVOURITE}
+	<span class="text-xs">
+		<RenderedContent
+			htmlContent={status.content}
+			emojis={status.emojis}
+		/>
+	</span>
+{:else if type === NotificationType.FAVOURITE && status}
 	<span class="text-sm">favourited your post</span>
-	<span class="text-xs"
-		><RenderedContent htmlContent={status?.content ?? ''} emojis={status?.emojis ?? []} /></span
-	>
+	<span class="text-xs">
+		<RenderedContent
+			htmlContent={status.content}
+			emojis={status.emojis}
+		/>
+	</span>
+{:else if type === NotificationType.MENTION && status}
+	<span class="text-sm">mentioned you</span>
+	<span class="text-xs">
+		<RenderedContent
+			htmlContent={status.content}
+			emojis={status.emojis}
+		/>
+	</span>
 {:else}
 	<span>{JSON.stringify(notification.type, undefined, 2)}</span>
 {/if}
 
-<hr class="bg-pink h-0.5 rounded-lg" />
+<hr class="bg-accent h-0.5 rounded-lg" />

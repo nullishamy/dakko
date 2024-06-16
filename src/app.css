@@ -3,19 +3,50 @@
 @tailwind utilities;
 
 @layer utilities {
-  /* Hide scrollbar for Chrome, Safari, and Opera */
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+	/* Hide scrollbar for Chrome, Safari, and Opera */
+	.hide-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
 
-  /* Hide scrollbar for IE, Edge, and Firefox */
-  .hide-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
+	/* Hide scrollbar for IE, Edge, and Firefox */
+	.hide-scrollbar {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+
+	.text-accent {
+		--tw-text-opacity: 1;
+		color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-text-opacity));
+	}
+
+	.bg-accent {
+		--tw-bg-opacity: 1;
+		background-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-bg-opacity));
+	}
+
+	.border-accent {
+		--tw-border-opacity: 1;
+		border-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-border-opacity));
+	}
+
+	.border-r-accent {
+		--tw-border-opacity: 1;
+		border-right-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-border-opacity));
+	}
+
+	.border-l-accent {
+		--tw-border-opacity: 1;
+		border-left-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-border-opacity));
+	}
+
+	.border-x-accent {
+		--tw-border-opacity: 1;
+		border-left-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-border-opacity));
+		border-right-color: rgba(var(--dakko-accent, var(--ctp-pink)), var(--tw-border-opacity));
+	}
 }
 
 a {
-  @apply text-blue underline;
-  text-decoration-skip-ink: none;
+	@apply text-blue underline;
+	text-decoration-skip-ink: none;
 }

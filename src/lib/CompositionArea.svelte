@@ -1,8 +1,8 @@
 <script lang="ts">
 	export let onPost: (data: { content: string; cw: string | undefined }) => void;
-	const data = {
+	export const data = {
 		content: '',
-		cw: undefined
+		cw: undefined as string | undefined
 	};
 
 	const handlePost = () => {
@@ -33,5 +33,10 @@
 
 	<div class="grow" />
 
-	<button class="bg-surface0 p-2 rounded-lg min-w-36" on:click={handlePost}>Post</button>
+	<button
+		class="bg-surface0 p-2 rounded-lg min-w-36"
+		on:click={handlePost}
+	>
+		Post
+	</button>
 </div>

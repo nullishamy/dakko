@@ -3,6 +3,8 @@
 	"singleQuote": true,
 	"trailingComma": "none",
 	"printWidth": 100,
+	"htmlWhitespaceSensitivity": "ignore",
+	"singleAttributePerLine": true,
 	"plugins": ["prettier-plugin-svelte"],
 	"overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }

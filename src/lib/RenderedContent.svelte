@@ -13,7 +13,7 @@
 		for (const node of elements) {
 			if (node.nodeType === 3) {
 				const span = document.createElement('span');
-				span.classList.add('from-text')
+				span.classList.add('from-text');
 				span.textContent = node.textContent;
 				node.parentElement!.insertBefore(span, node);
 				node.remove();
@@ -31,11 +31,11 @@
 	for (const node of doc.querySelectorAll('span.from-text')) {
 		const parent = node.parentElement;
 		// Skip `@` mentions, those use text nodes so get wrapped up as part of this
-		if (parent?.nodeName == "A") {
+		if (parent?.nodeName == 'A') {
 			continue;
 		}
 
-		const content = node.textContent ?? ''
+		const content = node.textContent ?? '';
 
 		const nodes = [];
 		let textBuffer = '';
@@ -44,8 +44,8 @@
 			const char = content[i];
 			if (char === ':') {
 				const rest = content.slice(i + 1);
-				const shortcode = rest.slice(0, rest.indexOf(':'))
-				let emoji = emojis.find(e => e.shortcode == shortcode)
+				const shortcode = rest.slice(0, rest.indexOf(':'));
+				let emoji = emojis.find((e) => e.shortcode == shortcode);
 
 				if (emoji) {
 					const sp = doc.createElement('span');
@@ -54,10 +54,10 @@
 					textBuffer = '';
 
 					const img = doc.createElement('img');
-					img.src = emoji.url
-					img.width = 25
-					img.height = 25
-					img.style.display = 'inline-block'
+					img.src = emoji.url;
+					img.width = 25;
+					img.height = 25;
+					img.style.display = 'inline-block';
 					nodes.push(img);
 
 					i += emoji.shortcode.length + 1;
@@ -76,9 +76,9 @@
 			nodes.push(sp);
 		}
 
-		node.innerHTML = ""
+		node.innerHTML = '';
 		for (const newNode of nodes) {
-			node.appendChild(newNode)
+			node.appendChild(newNode);
 		}
 	}
 </script>

@@ -9,7 +9,7 @@ use std::{
 };
 
 use axum::{extract::Query, response::IntoResponse, routing::get, Extension};
-use megalodon::{entities, generator, oauth::TokenData, Megalodon};
+use megalodon::{entities, generator, megalodon::FollowRequestOutput, oauth::TokenData, Megalodon};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -129,7 +129,21 @@ fn main() {
             get_notifications,
             login,
             login_state,
-            set_instance
+            set_instance,
+            get_relationships,
+            block_user,
+            unblock_user,
+            mute_user,
+            unmute_user,
+            follow_user,
+            unfollow_user,
+            get_follow_requests,
+            get_markers,
+            save_markers,
+            get_status,
+            bookmark_status,
+            unbookmark_status,
+            get_bookmarks
         ])
         .manage(AppState {
             client: Mutex::new(None),
@@ -170,7 +184,7 @@ async fn post_reply(
     let res = client
         .post_status(reply.content, Some(&options))
         .await
-        .unwrap();
+        .map_err(|_| ())?;
     let output = res.json();
     match output {
         megalodon::megalodon::PostStatusOutput::Status(status) => Ok(status),
@@ -198,7 +212,7 @@ async fn post_status(
     let res = client
         .post_status(status.content, Some(&options))
         .await
-        .unwrap();
+        .map_err(|_| ())?;
     let output = res.json();
     match output {
         megalodon::megalodon::PostStatusOutput::Status(status) => Ok(status),
@@ -216,8 +230,44 @@ async fn favourite_status(
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.favourite_status(status_id).await.unwrap();
+    let res = client.favourite_status(status_id).await.map_err(|_| ())?;
     Ok(res.json())
+}
+
+
+#[tauri::command]
+async fn get_bookmarks(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Status>, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.get_bookmarks(None).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_follow_requests(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Account>, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.get_follow_requests(None).await.map_err(|_| ())?;
+    let requests = res.json();
+    let requests = requests
+        .into_iter()
+        .map(|r| match r {
+            FollowRequestOutput::Account(d) => d,
+            FollowRequestOutput::FollowRequest(_) => todo!("implement this type"),
+        })
+        .collect();
+
+    Ok(requests)
 }
 
 #[tauri::command]
@@ -238,7 +288,70 @@ async fn get_statuses(
     let res = client
         .get_account_statuses(account_id, Some(&options))
         .await
-        .unwrap();
+        .map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_markers(
+    timelines: Vec<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Marker, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.get_markers(timelines).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_status(id: String, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.get_status(id).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn save_markers(
+    last_post_in_home: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Marker, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let options = megalodon::megalodon::SaveMarkersInputOptions {
+        home: Some(megalodon::megalodon::Marker {
+            last_reading_id: last_post_in_home,
+        }),
+        notifications: None,
+    };
+
+    let res = client.save_markers(Some(&options)).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_relationships(
+    account_ids: Vec<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Relationship>, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client
+        .get_relationships(account_ids)
+        .await
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -252,7 +365,7 @@ async fn boost_status(
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.reblog_status(status_id).await.unwrap();
+    let res = client.reblog_status(status_id).await.map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -261,7 +374,7 @@ async fn get_instance(state: tauri::State<'_, AppState>) -> Result<entities::Ins
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.get_instance().await.unwrap();
+    let res = client.get_instance().await.map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -272,12 +385,125 @@ async fn get_user(state: tauri::State<'_, AppState>) -> Result<entities::Account
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.verify_account_credentials().await.unwrap();
+    let res = client.verify_account_credentials().await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn bookmark_status(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.bookmark_status(id).await.unwrap();
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn unbookmark_status(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Status, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.unbookmark_status(id).await.unwrap();
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn follow_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.follow_account(id, None).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn unfollow_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.unfollow_account(id).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn block_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.block_account(id).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn unblock_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.unblock_account(id).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn mute_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.mute_account(id, false).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn unmute_user(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.unmute_account(id).await.map_err(|_| ())?;
     Ok(res.json())
 }
 
 #[tauri::command]
 async fn get_notifications(
+    since: Option<String>,
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<entities::Notification>, ()> {
     assert!(state.has_logged_in());
@@ -287,16 +513,21 @@ async fn get_notifications(
 
     let options = megalodon::megalodon::GetNotificationsInputOptions {
         limit: Some(25),
+        since_id: since,
         ..Default::default()
     };
 
-    let res = client.get_notifications(Some(&options)).await.unwrap();
+    let res = client
+        .get_notifications(Some(&options))
+        .await
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
 #[tauri::command]
 async fn get_home_timeline(
     start_at: Option<String>,
+    limit: u32,
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
@@ -305,18 +536,22 @@ async fn get_home_timeline(
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetHomeTimelineInputOptions {
-        limit: Some(25),
+        limit: Some(limit),
         max_id: start_at,
         ..Default::default()
     };
 
-    let res = client.get_home_timeline(Some(&options)).await.unwrap();
+    let res = client
+        .get_home_timeline(Some(&options))
+        .await
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
 #[tauri::command]
 async fn get_public_timeline(
     state: tauri::State<'_, AppState>,
+    limit: u32,
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
@@ -324,11 +559,14 @@ async fn get_public_timeline(
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetPublicTimelineInputOptions {
-        limit: Some(25),
+        limit: Some(limit),
         ..Default::default()
     };
 
-    let res = client.get_public_timeline(Some(&options)).await.unwrap();
+    let res = client
+        .get_public_timeline(Some(&options))
+        .await
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -350,12 +588,13 @@ async fn get_conversation(
     let res = client
         .get_status_context(entry_point, Some(&options))
         .await
-        .unwrap();
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
 #[tauri::command]
 async fn get_local_timeline(
+    limit: u32,
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
@@ -364,11 +603,14 @@ async fn get_local_timeline(
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetLocalTimelineInputOptions {
-        limit: Some(25),
+        limit: Some(limit),
         ..Default::default()
     };
 
-    let res = client.get_local_timeline(Some(&options)).await.unwrap();
+    let res = client
+        .get_local_timeline(Some(&options))
+        .await
+        .map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -381,7 +623,7 @@ async fn set_instance(url: String, state: tauri::State<'_, AppState>) -> Result<
     *client_state = Some(ClientState {
         base_url: url.clone(),
         client_id: "".to_string(),
-        client_secret: "".to_string()
+        client_secret: "".to_string(),
     });
 
     *client = Some(generator(megalodon::SNS::Pleroma, url, None, None));
