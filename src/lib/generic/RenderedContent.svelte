@@ -58,6 +58,8 @@
 					img.width = 25;
 					img.height = 25;
 					img.style.display = 'inline-block';
+					img.title = emoji.shortcode
+					img.alt = emoji.shortcode
 					nodes.push(img);
 
 					i += emoji.shortcode.length + 1;

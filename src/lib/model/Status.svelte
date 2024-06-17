@@ -72,7 +72,7 @@
 	};
 </script>
 
-<div class={highlighted ? 'bg-surface0 rounded-md relative p-2' : ' relative p-2'}>
+<div class={highlighted ? 'border-2 border-text rounded-md relative p-2' : ' relative p-2'}>
 	<div class="flex flex-row items-center justify-between">
 		<span class="flex flex-row gap-2 items-center flex-wrap min-w-0">
 			{#if reblog}
@@ -125,6 +125,41 @@
 			<time datetime={createdAt.toISOString()}>
 				{formatDistanceStrict(createdAt, new Date(), { addSuffix: true })}
 			</time>
+
+			{#if status.visibility === api.StatusVisibility.DIRECT}
+				<span title="Direct">
+					<Icon
+						icon="mdi:envelope"
+						width="20"
+						height="20"
+					/>
+				</span>
+			{:else if status.visibility === api.StatusVisibility.PRIVATE}
+				<span title="Followers-only">
+					<Icon
+						icon="mdi:lock"
+						width="20"
+						height="20"
+					/>
+				</span>
+			{:else if status.visibility === api.StatusVisibility.UNLISTED}
+				<span title="Unlisted">
+					<Icon
+						icon="mdi:unlocked"
+						width="20"
+						height="20"
+					/>
+				</span>
+			{:else if status.visibility === api.StatusVisibility.PUBLIC}
+				<span title="Public">
+					<Icon
+						icon="mdi:public"
+						width="20"
+						height="20"
+					/>
+				</span>
+			{/if}
+
 			<button on:click={() => onOpen(status)}>
 				<Icon
 					icon="material-symbols:keyboard-double-arrow-down"
@@ -285,11 +320,16 @@
 			class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center justify-center border border-accent ml-10 mt-2 rounded-md h-[32rem]"
 		>
 			{#each status.media_attachments as attachment}
-				<img
-					class="h-auto w-auto max-h-full"
-					src={attachment.url}
-					alt={attachment.description ?? 'Unknown'}
-				/>
+				{#if attachment.type === api.AttachmentType.IMAGE}
+					<img
+						class="h-auto w-auto max-h-full"
+						src={attachment.remote_url}
+						alt={attachment.description ?? 'Unknown'}
+					/>
+				{:else}
+					<span>Unsupported media type {attachment.type}</span>
+					<a href={attachment.remote_url}>Click to view externally</a>
+				{/if}
 			{/each}
 		</div>
 	{/if}
@@ -365,10 +405,12 @@
 	</div>
 
 	{#if replyOpen}
-		<CompositionArea
-			onPost={handleReply}
-			content={fullyQualifiedAccount(status.account)}
-			cw={status.sensitive ? `re: ${status.spoiler_text}` : undefined}
-		/>
+		<div class="p-2 bg-mantle rounded-md">
+			<CompositionArea
+				onPost={handleReply}
+				content={fullyQualifiedAccount((reblog ?? status).account) + ' '}
+				cw={status.sensitive ? `re: ${status.spoiler_text}` : undefined}
+			/>
+		</div>
 	{/if}
 </div>

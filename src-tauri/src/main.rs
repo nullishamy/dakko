@@ -5,7 +5,7 @@ use std::{
     fs::{self, File},
     io::Write,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf,
+    path::PathBuf, time::{Duration, Instant},
 };
 
 use axum::{extract::Query, response::IntoResponse, routing::get, Extension};
@@ -37,7 +37,18 @@ struct AppState {
 
 impl AppState {
     fn has_logged_in(&self) -> bool {
-        self.auth_state.lock().is_some() && self.client.lock().is_some()
+        let auth_lock = self.auth_state.try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+        let client_lock = self.client.try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+
+        if auth_lock.is_none() {
+            panic!("could not acquire auth lock in time")
+        }
+
+        if client_lock.is_none() {
+            panic!("could not acquire client lock in time")
+        }
+
+        auth_lock.unwrap().is_some() && client_lock.unwrap().is_some()
     }
 }
 
@@ -143,7 +154,8 @@ fn main() {
             get_status,
             bookmark_status,
             unbookmark_status,
-            get_bookmarks
+            get_bookmarks,
+            get_emojis
         ])
         .manage(AppState {
             client: Mutex::new(None),
@@ -160,6 +172,7 @@ fn main() {
 struct Content {
     content: String,
     cw: Option<String>,
+    visibility: entities::status::StatusVisibility
 }
 
 #[tauri::command]
@@ -178,6 +191,7 @@ async fn post_reply(
         in_reply_to_id: Some(post_id),
         sensitive: Some(sensitive),
         spoiler_text: reply.cw,
+        visibility: Some(reply.visibility),
         ..Default::default()
     };
 
@@ -206,6 +220,7 @@ async fn post_status(
     let options = megalodon::megalodon::PostStatusInputOptions {
         sensitive: Some(sensitive),
         spoiler_text: status.cw,
+        visibility: Some(status.visibility),
         ..Default::default()
     };
 
@@ -245,6 +260,19 @@ async fn get_bookmarks(
     let client = client.as_ref().unwrap();
 
     let res = client.get_bookmarks(None).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_emojis(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<entities::Emoji>, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.get_instance_custom_emojis().await.map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -640,10 +668,11 @@ enum LoginState {
 
 #[tauri::command]
 async fn login_state(state: tauri::State<'_, AppState>) -> Result<LoginState, ()> {
+    // let lock = state.client.try_lock();
     if state.has_logged_in() {
         Ok(LoginState::LoggedIn)
-    } else if state.client.lock().is_none() {
-        Ok(LoginState::InstanceUnknown)
+    // } else if lock.is_some() && lock.unwrap().is_none() {
+    //     Ok(LoginState::InstanceUnknown)
     } else {
         Ok(LoginState::LoginExpired)
     }

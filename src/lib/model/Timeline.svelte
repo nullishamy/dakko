@@ -5,21 +5,28 @@
 	import * as api from '$lib/api';
 	import { capitalise, openStatus } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
-	import { type MainContext, mainContext } from '$lib/context';
+	import {
+		type MainContext,
+		mainContext,
+		type SettingsContext,
+		settingsContext
+	} from '$lib/context';
 	import Icon from '@iconify/svelte';
+	import FilterWarning from './FilterWarning.svelte';
 
 	export let timeline: api.InstanceTimeline;
 
 	const { content } = getContext<MainContext>(mainContext);
+	const { filters } = getContext<SettingsContext>(settingsContext);
 
 	const replyMap = new Map<string, api.Status>();
-	const knownMarkers = new Set<string>()
+	const knownMarkers = new Set<string>();
 
 	export let scrollToPostId: string | undefined;
 
 	let scrollTo: Element;
 
-	const fetchStatuses = (startAt?: string, append?: true, limit = 10) => {
+	const fetchStatuses = (startAt?: string, append?: true, limit = 15) => {
 		invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
 			const res = _res as api.Status[];
 			const replyData = Promise.allSettled(
@@ -119,18 +126,28 @@
 
 <div class="mt-2 flex flex-col gap-4 m-1 px-2">
 	{#each statuses as status, i}
-		<StatusComponent
-			{status}
-			replyTo={replyMap.get(status.id)}
-			onOpen={handleStatusOpen}
-		/>
+		{@const [filterResult, filter] = $filters.filterStatus(status)}
+		{#if filterResult == 'show'}
+			<StatusComponent
+				{status}
+				replyTo={replyMap.get(status.id)}
+				onOpen={handleStatusOpen}
+			/>
+		{:else if filterResult === 'warning' && filter}
+			<FilterWarning
+				{filter}
+				{status}
+				fromTimeline={timeline}
+				cachedStatuses={statuses}
+			/>
+		{/if}
 		{#if status.id == scrollToPostId}
 			<div
 				bind:this={scrollTo}
 				class="w-full bg-blue h-1"
 			/>
 		{/if}
-		{#if i == statuses.length - 5}
+		{#if i == statuses.length - 10}
 			<div
 				class="h-2 w-12"
 				bind:this={element}
@@ -145,12 +162,12 @@
 		on:intersect={() => {
 			const lastId = statuses[statuses.length - 1]?.id;
 			if (knownMarkers.has(lastId)) {
-				console.log('Skipping known last id', lastId)
-				return
+				console.log('Skipping known last id', lastId);
+				return;
 			}
-			knownMarkers.add(lastId)
+			knownMarkers.add(lastId);
 			if (lastId) {
-				fetchStatuses(lastId, true, 15);
+				fetchStatuses(lastId, true, 25);
 				console.log('Fetching from', lastId);
 
 				// FIXME: https://github.com/h3poteto/megalodon-rs/pull/243
@@ -162,5 +179,5 @@
 			}
 		}}
 	></IntersectionObserver>
-	<div class="h-2 w-12">Loading</div>
+	<span class="h-2 w-12">Slow down! Loading more posts..</span>
 {/if}

@@ -27,6 +27,7 @@ export async function setInstance(instanceURL: string): Promise<void> {
 export const fetchLoginURL = makeSimpleFetcher<string>('login');
 export const fetchBookmarks = makeSimpleFetcher<api.Status[]>('get_bookmarks');
 export const fetchFollowRequests = makeSimpleFetcher<api.FollowRequest[]>('get_follow_requests');
+export const fetchCustomEmojis = makeSimpleFetcher<api.CustomEmoji[]>('get_emojis');
 
 export async function fetchNotifications(sinceId?: string): Promise<api.Notification[]> {
   return fetch('get_notifications', { since: sinceId })
@@ -53,6 +54,7 @@ export const unfavouriteStatus = makeStatusAction<void>('unfavourite_status')
 export interface StatusContent {
   content: string
   cw: string | undefined
+  visibility: api.StatusVisibility
 }
 export async function replyToStatus(statusId: string, reply: StatusContent): Promise<void> {
   return fetch('post_reply', {

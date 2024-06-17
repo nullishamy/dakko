@@ -91,7 +91,7 @@
 			Compose
 		</button>
 		{#if composeOpen}
-			<div class="absolute bg-mantle drop-shadow-md p-2 z-10">
+			<div class="absolute bg-mantle p-2 z-10 rounded-md">
 				<CompositionArea onPost={postStatus} />
 			</div>
 		{/if}
