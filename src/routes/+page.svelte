@@ -1,7 +1,6 @@
 <script lang="ts">
 	import NotificationPanel from '$lib/pane/NotificationPanel.svelte';
 	import Sidebar from '$lib/pane/Sidebar.svelte';
-	import { invoke } from '@tauri-apps/api';
 	import * as api from '$lib/api';
 	import {
 		mainContext,
@@ -41,54 +40,31 @@
 	let authURL: string | undefined;
 	let instanceURL = 'https://labyrinth.zone';
 
-	const handleSubmit = () => {
-		invoke('set_instance', {
-			url: instanceURL
-		}).then(() => {
-			invoke('login')
-				.then((res) => {
-					authURL = res as string;
-					window.location.replace(authURL as string);
-				})
-				.catch(console.error);
-		});
+	const handleSubmit = async () => {
+		await api.setInstance(instanceURL);
+		authURL = await api.fetchLoginURL();
+		window.location.replace(authURL as string);
 	};
 
-	onMount(() => {
-		invoke('login_state')
-			.then((res) => {
-				loginState = res as api.LoginStatus;
-				if (loginState == api.LoginStatus.LOGGED_IN) {
-					console.time('instance_fetch');
-					invoke('get_instance')
-						.then((res) => {
-							instance.set(res as api.Instance);
-							content.set({
-								type: 'timeline',
-								timeline: api.InstanceTimeline.HOME,
-								cachedStatuses: []
-							});
-							// content.set({
-							// 	type: 'settings',
-							// });
-							console.timeEnd('instance_fetch');
-						})
-						.catch((e) => console.error(e));
+	onMount(async () => {
+		loginState = await api.fetchLoginState();
 
-					console.time('user_fetch');
-					invoke('get_user')
-						.then((res) => {
-							account.set(res as api.Account);
-							// content.set({
-							// 	type: 'user',
-							// 	account: res as Account
-							// })
-							console.timeEnd('user_fetch');
-						})
-						.catch((e) => console.error(e));
-				}
-			})
-			.catch((e) => console.error(e));
+		if (loginState == api.LoginStatus.LOGGED_IN) {
+			console.time('instance_fetch');
+			const fetchedInstance = await api.fetchInstance();
+			instance.set(fetchedInstance);
+			content.set({
+				type: 'timeline',
+				timeline: api.InstanceTimeline.HOME,
+				cachedStatuses: []
+			});
+			console.timeEnd('instance_fetch');
+
+			console.time('user_fetch');
+			const fetchedUser = await api.fetchSelf();
+			account.set(fetchedUser);
+			console.timeEnd('user_fetch');
+		}
 	});
 
 	function navigateToLoginPage() {

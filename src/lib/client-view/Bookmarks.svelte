@@ -1,34 +1,22 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	import * as api from '$lib/api';
-	import { invoke } from '@tauri-apps/api';
 	import Status from '$lib/model/Status.svelte';
 	import { type MainContext, mainContext } from '$lib/context';
+	import { openStatus } from '../utils';
 
 	let bookmarks: api.Status[] | undefined = undefined;
 	const { content } = getContext<MainContext>(mainContext);
 
-	onMount(() => {
-		invoke('get_bookmarks').then((res) => {
-			bookmarks = res as api.Status[];
-		});
+	onMount(async () => {
+		bookmarks = await api.fetchBookmarks();
 	});
 
-	const handleStatusOpen = (status: api.Status) => {
-		invoke('get_conversation', {
-			entryPoint: status.id
-		}).then((res) => {
+	const handleStatusOpen = async (status: api.Status) => {
+		await openStatus(status, content, () => {
 			content.set({
-				type: 'status',
-				openedId: status.reblog?.id ?? status.id,
-				status: status,
-				statusContext: res as api.StatusContext,
-				onReturn: () => {
-					content.set({
-						type: 'client',
-						menu: 'bookmarks'
-					});
-				}
+				type: 'client',
+				menu: 'bookmarks'
 			});
 		});
 	};

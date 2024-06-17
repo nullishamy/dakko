@@ -1,30 +1,22 @@
 <script lang="ts">
-	import { invoke } from '@tauri-apps/api/tauri';
 	import Notification from '$lib/model/Notification.svelte';
 	import * as api from '$lib/api';
 	import { onMount } from 'svelte';
 
 	let notifications: api.Notification[] = [];
 
-	onMount(() => {
-		invoke('get_notifications').then((res) => {
-			notifications = res as api.Notification[];
-		});
+	onMount(async () => {
+		notifications = await api.fetchNotifications();
 	});
 
-	setInterval(() => {
+	setInterval(async () => {
 		const lastId = notifications[0]?.id;
 		if (lastId) {
-			invoke('get_notifications', {
-				since: lastId
-			}).then((res) => {
-				console.log('Fetching notifications from', lastId, res);
-				notifications = [...(res as api.Notification[]), ...notifications];
-			});
+			const newNotifications = await api.fetchNotifications(lastId);
+			console.log('Fetching notifications from', lastId, newNotifications);
+			notifications = [...newNotifications, ...notifications];
 		} else {
-			invoke('get_notifications').then((res) => {
-				notifications = res as api.Notification[];
-			});
+			notifications = await api.fetchNotifications();
 		}
 	}, 15_000);
 </script>

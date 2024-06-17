@@ -3,7 +3,7 @@
 	import StatusComponent from './Status.svelte';
 	import IntersectionObserver from 'svelte-intersection-observer';
 	import * as api from '$lib/api';
-	import { capitalise } from '$lib/utils';
+	import { capitalise, openStatus } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 	import Icon from '@iconify/svelte';
@@ -13,6 +13,7 @@
 	const { content } = getContext<MainContext>(mainContext);
 
 	const replyMap = new Map<string, api.Status>();
+	const knownMarkers = new Set<string>()
 
 	export let scrollToPostId: string | undefined;
 
@@ -44,23 +45,13 @@
 	};
 
 	let openedStatus: api.Status | undefined;
-	const handleStatusOpen = (status: api.Status) => {
-		invoke('get_conversation', {
-			entryPoint: status.id
-		}).then((res) => {
+	const handleStatusOpen = async (status: api.Status) => {
+		await openStatus(status, content, () => {
 			content.set({
-				type: 'status',
-				openedId: status.reblog?.id ?? status.id,
-				status: status,
-				statusContext: res as api.StatusContext,
-				onReturn: () => {
-					content.set({
-						type: 'timeline',
-						timeline,
-						cachedStatuses: statuses,
-						scrollToPostId: status.id
-					});
-				}
+				type: 'timeline',
+				timeline,
+				cachedStatuses: statuses,
+				scrollToPostId: status.id
 			});
 		});
 	};
@@ -70,7 +61,9 @@
 		if (!statuses.length) {
 			fetchStatuses();
 		}
-		scrollTo?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+		scrollTo?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
 		// FIXME: https://github.com/h3poteto/megalodon-rs/pull/243
 		// invoke('get_markers', {
 		// 	timelines: ['home', 'notifications']
@@ -151,6 +144,11 @@
 		{element}
 		on:intersect={() => {
 			const lastId = statuses[statuses.length - 1]?.id;
+			if (knownMarkers.has(lastId)) {
+				console.log('Skipping known last id', lastId)
+				return
+			}
+			knownMarkers.add(lastId)
 			if (lastId) {
 				fetchStatuses(lastId, true, 15);
 				console.log('Fetching from', lastId);

@@ -1,23 +1,21 @@
 <script lang="ts">
-	import { formatDistanceStrict } from 'date-fns';
 	import * as api from '$lib/api';
+	import { mainContext, type MainContext } from '$lib/context';
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
-	import { invoke } from '@tauri-apps/api/tauri';
-	import AccountView from './AccountView.svelte';
 	import RenderedContent from '$lib/generic/RenderedContent.svelte';
-	import { getContext } from 'svelte';
-	import { type MainContext, mainContext } from '$lib/context';
-	import Icon from '@iconify/svelte';
 	import { fullyQualifiedAccount } from '$lib/utils';
+	import Icon from '@iconify/svelte';
+	import { formatDistanceStrict } from 'date-fns';
+	import { getContext } from 'svelte';
+	import AccountView from './AccountView.svelte';
 
 	export let onOpen: (status: api.Status) => void;
 	export let highlighted: boolean = false;
 
 	export let status: api.Status;
 	export let replyTo: api.Status | undefined = undefined;
-	export let container: Element | undefined = undefined;
-	const reblog = status.reblog;
 
+	const reblog = status.reblog;
 	const createdAt = new Date(reblog ? reblog.created_at : status.created_at);
 	const { content } = getContext<MainContext>(mainContext);
 
@@ -37,55 +35,34 @@
 	};
 
 	let hasBeenBookmarked = reblog?.bookmarked ?? status.bookmarked ?? false;
-	console.log(reblog);
-	console.log(status);
-	const handleBookmark = () => {
-		console.log('haseen', hasBeenBookmarked);
-
+	const handleBookmark = async () => {
 		if (hasBeenBookmarked) {
-			invoke('unbookmark_status', {
-				id: (reblog ?? status).id
-			}).then(() => {
-				hasBeenBookmarked = false;
-			});
+			await api.unbookmarkStatus((reblog ?? status).id);
 		} else {
-			invoke('bookmark_status', {
-				id: (reblog ?? status).id
-			}).then(() => {
-				hasBeenBookmarked = true;
-			});
+			await api.bookmarkStatus((reblog ?? status).id);
 		}
 	};
 
 	let replyCount = (reblog ?? status).replies_count;
-	const handleReply = (data: {}) => {
-		invoke('post_reply', {
-			postId: status.id,
-			reply: data
-		});
+	const handleReply = async (data: api.StatusContent) => {
+		await api.replyToStatus(status.id, data);
 		toggleReply();
 	};
 
 	let hasBeenFavourited = status.favourited ?? false;
 	let favouriteCount = (reblog ?? status).favourites_count;
-	const handleFavourite = () => {
-		invoke('favourite_status', {
-			statusId: status.id
-		}).then(() => {
-			hasBeenFavourited = true;
-			favouriteCount += 1;
-		});
+	const handleFavourite = async () => {
+		await api.favouriteStatus((reblog ?? status).id);
+		hasBeenFavourited = true;
+		favouriteCount += 1;
 	};
 
 	let hasBeenBoosted = status.reblogged ?? false;
 	let boostCount = (reblog ?? status).reblogs_count;
-	const handleBoost = () => {
-		invoke('boost_status', {
-			statusId: reblog ? reblog.id : status.id
-		}).then(() => {
-			hasBeenBoosted = true;
-			boostCount += 1;
-		});
+	const handleBoost = async () => {
+		await api.boostStatus((reblog ?? status).id);
+		hasBeenBoosted = true;
+		boostCount += 1;
 	};
 
 	let isSensitive = reblog?.sensitive || status.sensitive;
@@ -95,10 +72,7 @@
 	};
 </script>
 
-<div
-	class={highlighted ? 'bg-surface0 rounded-md relative p-2' : ' relative p-2'}
-	bind:this={container}
->
+<div class={highlighted ? 'bg-surface0 rounded-md relative p-2' : ' relative p-2'}>
 	<div class="flex flex-row items-center justify-between">
 		<span class="flex flex-row gap-2 items-center flex-wrap min-w-0">
 			{#if reblog}
@@ -308,11 +282,11 @@
 
 	{#if ((isSensitive && showSensitive) || !isSensitive) && status.media_attachments.length}
 		<div
-			class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center border border-accent ml-10 mt-2 rounded-md"
+			class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center justify-center border border-accent ml-10 mt-2 rounded-md h-[32rem]"
 		>
 			{#each status.media_attachments as attachment}
 				<img
-					class="w-full"
+					class="h-auto w-auto max-h-full"
 					src={attachment.url}
 					alt={attachment.description ?? 'Unknown'}
 				/>
@@ -393,10 +367,8 @@
 	{#if replyOpen}
 		<CompositionArea
 			onPost={handleReply}
-			data={{
-				cw: status.sensitive ? `re: ${status.spoiler_text}` : undefined,
-				content: fullyQualifiedAccount(status.account)
-			}}
+			content={fullyQualifiedAccount(status.account)}
+			cw={status.sensitive ? `re: ${status.spoiler_text}` : undefined}
 		/>
 	{/if}
 </div>

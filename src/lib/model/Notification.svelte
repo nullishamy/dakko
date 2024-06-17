@@ -5,8 +5,7 @@
 	import Icon from '@iconify/svelte';
 	import { getContext } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';
-	import { invoke } from '@tauri-apps/api';
-	import { fullyQualifiedAccount } from '$lib/utils';
+	import { fullyQualifiedAccount, openStatus } from '$lib/utils';
 
 	export let notification: api.Notification;
 
@@ -23,23 +22,13 @@
 		api.NotificationType.MOVE
 	].includes(type);
 
-	const handleOpenStatus = (status: api.Status) => {
+	const handleOpenStatus = async (status: api.Status) => {
 		content.set({ type: 'none' });
-		invoke('get_conversation', {
-			entryPoint: status.id
-		}).then((res) => {
+		await openStatus(status, content, () => {
 			content.set({
-				type: 'status',
-				openedId: status.reblog?.id ?? status.id,
-				status: status,
-				statusContext: res as api.StatusContext,
-				onReturn: () => {
-					content.set({
-						type: 'timeline',
-						timeline: api.InstanceTimeline.HOME,
-						cachedStatuses: []
-					});
-				}
+				type: 'timeline',
+				timeline: api.InstanceTimeline.HOME,
+				cachedStatuses: []
 			});
 		});
 	};

@@ -5,21 +5,17 @@
 	import AccountView from '$lib/model/AccountView.svelte';
 	import Status from '$lib/model/Status.svelte';
 	import * as api from '$lib/api';
-	import { invoke } from '@tauri-apps/api';
 	import ClientContent from '../client-view/ClientContent.svelte';
 
 	const { content } = getContext<MainContext>(mainContext);
-	const handleStatusOpen = (status: api.Status) => {
-		invoke('get_conversation', {
-			entryPoint: status.id
-		}).then((res) => {
-			content.set({
-				type: 'status',
-				openedId: status.reblog?.id ?? status.id,
-				status: status,
-				statusContext: res as api.StatusContext,
-				onReturn: ($content as StatusContent).onReturn
-			});
+	const handleStatusOpen = async (status: api.Status) => {
+		const ctx = await api.fetchStatusContext(status.id);
+		content.set({
+			type: 'status',
+			openedId: status.reblog?.id ?? status.id,
+			status: status,
+			statusContext: ctx,
+			onReturn: ($content as StatusContent).onReturn
 		});
 	};
 </script>

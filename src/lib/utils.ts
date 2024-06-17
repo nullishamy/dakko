@@ -1,4 +1,6 @@
-import * as api from '$lib/api'
+import * as api from '$lib/api';
+import { type MainContent } from './context';
+import type { Writable } from 'svelte/store';
 
 export function capitalise(str: string): string {
 	if (!str) {
@@ -25,4 +27,15 @@ export function elipsise(text: string, maxLen: number): string {
 export function fullyQualifiedAccount(account: api.Account): string {
 	const domain = new URL(account.url);
 	return `@${account.username}@${domain.host}`;
+}
+
+export async function openStatus(status: api.Status, content: Writable<MainContent>, onReturn: () => void): Promise<void> {
+	const ctx = await api.fetchStatusContext(status.id);
+	content.set({
+		type: 'status',
+		openedId: status.reblog?.id ?? status.id,
+		status: status,
+		statusContext: ctx,
+		onReturn
+	});
 }

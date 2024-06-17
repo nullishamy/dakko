@@ -1,24 +1,23 @@
 <script lang="ts">
 	export let onPost: (data: { content: string; cw: string | undefined }) => void;
-	export const data = {
-		content: '',
-		cw: undefined as string | undefined
-	};
+
+	export let content: string = ''
+	export let cw: string | undefined = undefined
 
 	const handlePost = () => {
-		onPost(data);
+		onPost({ content, cw });
 	};
 </script>
 
 <div class="w-full">
 	<textarea
-		bind:value={data.cw}
+		bind:value={cw}
 		class="bg-surface0 w-full min-h-10 text-text p-1"
 		placeholder="Content warning (optional)"
 	></textarea>
 
 	<textarea
-		bind:value={data.content}
+		bind:value={content}
 		required
 		class="bg-surface0 w-full min-h-36 text-text p-1"
 		placeholder="Something creative..."

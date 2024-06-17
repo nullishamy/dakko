@@ -222,7 +222,7 @@ async fn post_status(
 
 #[tauri::command]
 async fn favourite_status(
-    status_id: String,
+    id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
@@ -230,7 +230,7 @@ async fn favourite_status(
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.favourite_status(status_id).await.map_err(|_| ())?;
+    let res = client.favourite_status(id).await.map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -272,7 +272,7 @@ async fn get_follow_requests(
 
 #[tauri::command]
 async fn get_statuses(
-    account_id: String,
+    id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
@@ -286,7 +286,7 @@ async fn get_statuses(
     };
 
     let res = client
-        .get_account_statuses(account_id, Some(&options))
+        .get_account_statuses(id, Some(&options))
         .await
         .map_err(|_| ())?;
     Ok(res.json())
@@ -357,7 +357,7 @@ async fn get_relationships(
 
 #[tauri::command]
 async fn boost_status(
-    status_id: String,
+    id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
@@ -365,7 +365,7 @@ async fn boost_status(
     let client = state.client.lock();
     let client = client.as_ref().unwrap();
 
-    let res = client.reblog_status(status_id).await.map_err(|_| ())?;
+    let res = client.reblog_status(id).await.unwrap();
     Ok(res.json())
 }
 

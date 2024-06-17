@@ -2,7 +2,6 @@
 	import { getContext } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
-	import { invoke } from '@tauri-apps/api/tauri';
 	import * as api from '$lib/api';
 	import Icon from '@iconify/svelte';
 
@@ -13,12 +12,9 @@
 		composeOpen = !composeOpen;
 	};
 
-	const postStatus = (status: { content: string; cw: string | undefined }) => {
-		invoke('post_status', {
-			status
-		}).then(() => {
-			toggleCompose();
-		});
+	const postStatus = async (status: api.StatusContent) => {
+		await api.postStatus(status)
+		toggleCompose();
 	};
 
 	const openOwnAccount = () => {

@@ -2,10 +2,10 @@
 	import { getContext, onMount } from 'svelte';
 	import RenderedContent from '$lib/generic/RenderedContent.svelte';
 	import * as api from '$lib/api';
-	import { invoke } from '@tauri-apps/api';
 	import StatusComponent from './Status.svelte';
 	import Icon from '@iconify/svelte';
 	import { type MainContext, mainContext } from '$lib/context';
+	import { openStatus } from '../utils';
 
 	export let account: api.Account;
 	export let isCondensed = false;
@@ -13,21 +13,11 @@
 	export let onClose = () => {};
 	export let onOpen = (account: api.Account) => {};
 
-	const openStatus = (status: api.Status) => {
-		invoke('get_conversation', {
-			entryPoint: status.id
-		}).then((res) => {
+	const handleStatusOpen = async (status: api.Status) => {
+		await openStatus(status, content, () => {
 			content.set({
-				type: 'status',
-				openedId: status.reblog?.id ?? status.id,
-				status: status,
-				statusContext: res as api.StatusContext,
-				onReturn: () => {
-					content.set({
-						type: 'user',
-						account
-					});
-				}
+				type: 'user',
+				account
 			});
 		});
 	};
@@ -51,33 +41,19 @@
 		note: undefined
 	};
 
-	onMount(() => {
-		invoke('get_statuses', {
-			accountId: account.id
-		}).then((res) => {
-			accountStatuses = res as api.Status[];
-		});
-
-		invoke('get_relationships', {
-			accountIds: [account.id]
-		}).then((res) => {
-			relationship = (res as unknown[])[0] as api.Relationship;
-		});
+	onMount(async () => {
+		relationship = (await api.fetchRelationships(account.id))[0];
+		console.log(relationship)
+		if (!isCondensed) {
+			accountStatuses = await api.fetchStatuses(account.id);
+		}
 	});
 
-	const toggleFollow = (account: api.Account) => {
+	const toggleFollow = async () => {
 		if (relationship.following) {
-			invoke('unfollow_user', {
-				id: account.id
-			}).then((res) => {
-				relationship = res as api.Relationship;
-			});
+			relationship = await api.unfollowUser(account.id);
 		} else {
-			invoke('follow_user', {
-				id: account.id
-			}).then((res) => {
-				relationship = res as api.Relationship;
-			});
+			relationship = await api.followUser(account.id);
 		}
 	};
 </script>
@@ -121,7 +97,10 @@
 	</div>
 
 	<div class="my-8 flex flex-row gap-8">
-		<button class="py-0.5 px-3 border border-accent rounded-md">
+		<button
+			class="py-0.5 px-3 border border-accent rounded-md"
+			on:click={toggleFollow}
+		>
 			{#if relationship.requested}
 				Requested!
 			{:else if relationship.following}
@@ -212,7 +191,7 @@
 				<StatusComponent
 					{status}
 					onOpen={(status) => {
-						openStatus(status);
+						handleStatusOpen(status);
 					}}
 				/>
 			{/each}
