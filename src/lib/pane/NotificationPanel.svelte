@@ -10,10 +10,9 @@
 		notifications = await api.fetchNotifications();
 	});
 
-	let newNotifications = 0
-
 	setInterval(async () => {
-		newNotifications = (await api.fetchNotifications(notifications[0].id)).length;
+		const newNotifications = await api.fetchNotifications(notifications[0].id);
+		notifications = [...newNotifications, ...notifications]
 	}, 15_000);
 </script>
 
@@ -33,7 +32,6 @@
 			width="25"
 			class="text-accent"
 		/>
-		{newNotifications > 0 ? `${newNotifications} new` : 'Caught up'}
 	</button>
 </div>
 <div class="mt-2 flex flex-col gap-2 p-2">

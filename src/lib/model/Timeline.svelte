@@ -133,7 +133,7 @@
 	</button>
 </div>
 
-<div class="mt-2 flex flex-col gap-4 m-1 px-2">
+<div class="mt-2 flex flex-col gap-8 m-1">
 	{#each statuses as status, i}
 		{@const [filterResult, triggeredFilter] = $filters.filterStatus(status)}
 		{#if filterResult == 'show'}

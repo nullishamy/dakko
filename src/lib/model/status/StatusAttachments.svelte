@@ -12,7 +12,7 @@
 
 {#if status.media_attachments.length}
 	<div
-		class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center justify-center border border-accent ml-10 mt-2 rounded-md h-[32rem]"
+		class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center justify-center border border-accent mt-2 rounded-md h-[32rem]"
 	>
 		{#each status.media_attachments as attachment}
 			{#if attachment.type === api.AttachmentType.IMAGE}

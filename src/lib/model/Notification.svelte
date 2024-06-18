@@ -50,6 +50,7 @@
 				width="35"
 				height="35"
 				class="rounded-full mr-2"
+				alt={`avatar for ${account.username}`}
 			/>
 		</button>
 		<span>

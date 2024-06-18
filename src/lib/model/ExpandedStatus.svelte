@@ -19,12 +19,12 @@
 
 	let selected: Element;
   onMount(() => {
-		selected?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+		selected?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   })
 </script>
 
 <button on:click={statusContent.onReturn}>Back</button>
-<div>
+<div class="flex flex-col gap-4">
 	{#each statusContent.statusContext.ancestors as status}
 		<Status
 			{status}
