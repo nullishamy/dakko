@@ -5,7 +5,8 @@ use std::{
     fs::{self, File},
     io::Write,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf, time::{Duration, Instant},
+    path::PathBuf,
+    time::{Duration, Instant},
 };
 
 use axum::{extract::Query, response::IntoResponse, routing::get, Extension};
@@ -37,8 +38,12 @@ struct AppState {
 
 impl AppState {
     fn has_logged_in(&self) -> bool {
-        let auth_lock = self.auth_state.try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
-        let client_lock = self.client.try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+        let auth_lock = self
+            .auth_state
+            .try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+        let client_lock = self
+            .client
+            .try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
 
         if auth_lock.is_none() {
             panic!("could not acquire auth lock in time")
@@ -155,7 +160,10 @@ fn main() {
             bookmark_status,
             unbookmark_status,
             get_bookmarks,
-            get_emojis
+            get_emojis,
+            get_home_catchup,
+            accept_follow_request,
+            deny_follow_request
         ])
         .manage(AppState {
             client: Mutex::new(None),
@@ -172,7 +180,8 @@ fn main() {
 struct Content {
     content: String,
     cw: Option<String>,
-    visibility: entities::status::StatusVisibility
+    visibility: entities::status::StatusVisibility,
+    quoting: Option<String>,
 }
 
 #[tauri::command]
@@ -221,6 +230,7 @@ async fn post_status(
         sensitive: Some(sensitive),
         spoiler_text: status.cw,
         visibility: Some(status.visibility),
+        quote_id: status.quoting,
         ..Default::default()
     };
 
@@ -249,11 +259,8 @@ async fn favourite_status(
     Ok(res.json())
 }
 
-
 #[tauri::command]
-async fn get_bookmarks(
-    state: tauri::State<'_, AppState>,
-) -> Result<Vec<entities::Status>, ()> {
+async fn get_bookmarks(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
@@ -264,9 +271,7 @@ async fn get_bookmarks(
 }
 
 #[tauri::command]
-async fn get_emojis(
-    state: tauri::State<'_, AppState>,
-) -> Result<Vec<entities::Emoji>, ()> {
+async fn get_emojis(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Emoji>, ()> {
     assert!(state.has_logged_in());
 
     let client = state.client.lock();
@@ -348,6 +353,7 @@ async fn get_status(id: String, state: tauri::State<'_, AppState>) -> Result<ent
 #[tauri::command]
 async fn save_markers(
     last_post_in_home: String,
+    last_notification: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<entities::Marker, ()> {
     assert!(state.has_logged_in());
@@ -359,10 +365,12 @@ async fn save_markers(
         home: Some(megalodon::megalodon::Marker {
             last_reading_id: last_post_in_home,
         }),
-        notifications: None,
+        notifications: Some(megalodon::megalodon::Marker {
+            last_reading_id: last_notification,
+        }),
     };
 
-    let res = client.save_markers(Some(&options)).await.map_err(|_| ())?;
+    let res = client.save_markers(Some(&options)).await.unwrap();
     Ok(res.json())
 }
 
@@ -442,6 +450,34 @@ async fn unbookmark_status(
     let client = client.as_ref().unwrap();
 
     let res = client.unbookmark_status(id).await.unwrap();
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn accept_follow_request(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.accept_follow_request(id).await.map_err(|_| ())?;
+    Ok(res.json())
+}
+
+#[tauri::command]
+async fn deny_follow_request(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Relationship, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let res = client.reject_follow_request(id).await.map_err(|_| ())?;
     Ok(res.json())
 }
 
@@ -550,6 +586,28 @@ async fn get_notifications(
         .await
         .map_err(|_| ())?;
     Ok(res.json())
+}
+
+#[tauri::command]
+async fn get_home_catchup(
+    since_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<usize, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.lock();
+    let client = client.as_ref().unwrap();
+
+    let options = megalodon::megalodon::GetHomeTimelineInputOptions {
+        since_id: Some(since_id),
+        ..Default::default()
+    };
+
+    let res = client
+        .get_home_timeline(Some(&options))
+        .await
+        .map_err(|_| ())?;
+    Ok(res.json().len())
 }
 
 #[tauri::command]

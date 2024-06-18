@@ -6,6 +6,7 @@
 	import Status from '$lib/model/Status.svelte';
 	import * as api from '$lib/api';
 	import ClientContent from '../client-view/ClientContent.svelte';
+	import ExpandedStatus from '../model/ExpandedStatus.svelte';
 
 	const { content } = getContext<MainContext>(mainContext);
 	const handleStatusOpen = async (status: api.Status) => {
@@ -29,28 +30,7 @@
 		scrollToPostId={$content.scrollToPostId}
 	/>
 {:else if $content?.type == 'status'}
-	<button on:click={$content.onReturn}>Back</button>
-	{#each $content.statusContext.ancestors as status}
-		<Status
-			{status}
-			highlighted={status.id === $content.openedId}
-			onOpen={handleStatusOpen}
-		/>
-	{/each}
-	{#if !$content.status.reblog}
-		<Status
-			status={$content.status}
-			highlighted
-			onOpen={handleStatusOpen}
-		/>
-	{/if}
-	{#each $content.statusContext.descendants as status}
-		<Status
-			{status}
-			highlighted={status.id === $content.openedId}
-			onOpen={handleStatusOpen}
-		/>
-	{/each}
+	<ExpandedStatus statusContent={$content}/>
 {:else if $content?.type == 'client'}
 	<ClientContent content={$content} />
 {:else}

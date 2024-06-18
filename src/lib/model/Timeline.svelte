@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/tauri';
-	import StatusComponent from './Status.svelte';
+	import Status from './Status.svelte';
 	import IntersectionObserver from 'svelte-intersection-observer';
 	import * as api from '$lib/api';
 	import { capitalise, openStatus } from '$lib/utils';
@@ -13,43 +13,44 @@
 	} from '$lib/context';
 	import Icon from '@iconify/svelte';
 	import FilterWarning from './FilterWarning.svelte';
+	import { firstPostInHome } from './timeline-store';
 
 	export let timeline: api.InstanceTimeline;
 
 	const { content } = getContext<MainContext>(mainContext);
 	const { filters } = getContext<SettingsContext>(settingsContext);
 
-	const replyMap = new Map<string, api.Status>();
+	const replyMap = new Map<string, api.Account>();
 	const knownMarkers = new Set<string>();
 
 	export let scrollToPostId: string | undefined;
 
 	let scrollTo: Element;
 
-	const fetchStatuses = (startAt?: string, append?: true, limit = 15) => {
-		invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
+	const fetchStatuses = (startAt?: string, append?: true, limit = 15): Promise<void> => {
+		return invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
 			const res = _res as api.Status[];
-			const replyData = Promise.allSettled(
-				res
-					.filter((r) => r.in_reply_to_id !== null)
-					.map(async (r) => {
-						const reply = (await invoke('get_status', {
-							id: r.in_reply_to_id
-						})) as api.Status;
+			res
+				.filter((r) => r.in_reply_to_account_id !== null)
+				.forEach((r) => {
+					const account = r.mentions.find((a) => a.id == r.in_reply_to_account_id);
+					if (account) {
+						replyMap.set(r.id, account);
+					}
+				});
 
-						replyMap.set(r.id, reply);
-					})
-			);
-
-			replyData.then(() => {
-				if (append) {
-					statuses = [...statuses, ...res];
-				} else {
-					statuses = res;
-				}
-			});
+			if (append) {
+				statuses = [...statuses, ...res];
+			} else {
+				statuses = res;
+			}
 		});
 	};
+
+	const fetchCatchupAmount = async (sinceId: string) => {
+		const posts = await invoke(`get_${timeline}_catchup`, { sinceId })
+		return posts as number
+	}
 
 	let openedStatus: api.Status | undefined;
 	const handleStatusOpen = async (status: api.Status) => {
@@ -64,18 +65,23 @@
 	};
 
 	export let statuses: api.Status[] = [];
-	onMount(() => {
+	let statusesToCatchup = 0
+	onMount(async () => {
 		if (!statuses.length) {
-			fetchStatuses();
+			await fetchStatuses($firstPostInHome);
+			if (!$firstPostInHome) {
+				firstPostInHome.set(statuses[0].id)
+			}
 		}
 
 		scrollTo?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-
-		// FIXME: https://github.com/h3poteto/megalodon-rs/pull/243
-		// invoke('get_markers', {
-		// 	timelines: ['home', 'notifications']
-		// })
 	});
+
+	setInterval(async () => {
+		if ($firstPostInHome) {
+			statusesToCatchup = await fetchCatchupAmount($firstPostInHome)		
+		}
+	}, 10_000)
 
 	const timelines: api.InstanceTimeline[] = [
 		api.InstanceTimeline.HOME,
@@ -110,10 +116,12 @@
 	{/each}
 	<div class="grow" />
 	<button
-		on:click={() => {
+		on:click={async () => {
 			statuses = [];
-			fetchStatuses();
+			await fetchStatuses();
+			firstPostInHome.set(statuses[0].id)
 		}}
+		class="flex flex-row items-end gap-2"
 	>
 		<Icon
 			icon="material-symbols:refresh-rounded"
@@ -121,21 +129,23 @@
 			width="25"
 			class="text-accent"
 		/>
+		{statusesToCatchup > 0 ? `${statusesToCatchup} new` : 'Caught up'}
 	</button>
 </div>
 
 <div class="mt-2 flex flex-col gap-4 m-1 px-2">
 	{#each statuses as status, i}
-		{@const [filterResult, filter] = $filters.filterStatus(status)}
+		{@const [filterResult, triggeredFilter] = $filters.filterStatus(status)}
 		{#if filterResult == 'show'}
-			<StatusComponent
+			<Status
 				{status}
 				replyTo={replyMap.get(status.id)}
+				highlighted={status.id === scrollToPostId}
 				onOpen={handleStatusOpen}
 			/>
-		{:else if filterResult === 'warning' && filter}
+		{:else if filterResult === 'warning' && triggeredFilter}
 			<FilterWarning
-				{filter}
+				filter={triggeredFilter}
 				{status}
 				fromTimeline={timeline}
 				cachedStatuses={statuses}
@@ -144,7 +154,7 @@
 		{#if status.id == scrollToPostId}
 			<div
 				bind:this={scrollTo}
-				class="w-full bg-blue h-1"
+				class="w-full h-1"
 			/>
 		{/if}
 		{#if i == statuses.length - 10}
@@ -169,13 +179,6 @@
 			if (lastId) {
 				fetchStatuses(lastId, true, 25);
 				console.log('Fetching from', lastId);
-
-				// FIXME: https://github.com/h3poteto/megalodon-rs/pull/243
-				// invoke('save_markers', {
-				// 	lastPostInHome: lastId
-				// }).then(res => {
-				// 	console.log('save', res)
-				// }).catch(err => console.error(err))
 			}
 		}}
 	></IntersectionObserver>

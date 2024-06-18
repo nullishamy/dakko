@@ -2,6 +2,7 @@
 	import Notification from '$lib/model/Notification.svelte';
 	import * as api from '$lib/api';
 	import { onMount } from 'svelte';
+	import Icon from '@iconify/svelte';
 
 	let notifications: api.Notification[] = [];
 
@@ -9,19 +10,32 @@
 		notifications = await api.fetchNotifications();
 	});
 
+	let newNotifications = 0
+
 	setInterval(async () => {
-		const lastId = notifications[0]?.id;
-		if (lastId) {
-			const newNotifications = await api.fetchNotifications(lastId);
-			console.log('Fetching notifications from', lastId, newNotifications);
-			notifications = [...newNotifications, ...notifications];
-		} else {
-			notifications = await api.fetchNotifications();
-		}
+		newNotifications = (await api.fetchNotifications(notifications[0].id)).length;
 	}, 15_000);
 </script>
 
-<h2 class="bg-mantle p-1 text-xl">Notifications</h2>
+<div class="flex flex-row items-center p-1 w-full">
+	<h2 class="text-xl">Notifications</h2>
+	<div class="flex-grow"/>
+	<button
+		on:click={async () => {
+			notifications = [];
+			notifications = await api.fetchNotifications();
+		}}
+		class="flex flex-row items-end gap-2"
+	>
+		<Icon
+			icon="material-symbols:refresh-rounded"
+			height="25"
+			width="25"
+			class="text-accent"
+		/>
+		{newNotifications > 0 ? `${newNotifications} new` : 'Caught up'}
+	</button>
+</div>
 <div class="mt-2 flex flex-col gap-2 p-2">
 	{#if !notifications.length}
 		<span>Loading...</span>

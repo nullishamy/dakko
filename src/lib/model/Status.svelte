@@ -2,26 +2,30 @@
 	import * as api from '$lib/api';
 	import { mainContext, type MainContext } from '$lib/context';
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
-	import RenderedContent from '$lib/generic/RenderedContent.svelte';
 	import { fullyQualifiedAccount } from '$lib/utils';
 	import Icon from '@iconify/svelte';
-	import { formatDistanceStrict } from 'date-fns';
 	import { getContext } from 'svelte';
 	import AccountView from './AccountView.svelte';
+	import StatusHeader from './StatusHeader.svelte';
+	import StatusContent from './StatusContent.svelte';
 
 	export let onOpen: (status: api.Status) => void;
 	export let highlighted: boolean = false;
 
 	export let status: api.Status;
-	export let replyTo: api.Status | undefined = undefined;
+	export let replyTo: api.Account | undefined = undefined;
 
 	const reblog = status.reblog;
-	const createdAt = new Date(reblog ? reblog.created_at : status.created_at);
 	const { content } = getContext<MainContext>(mainContext);
 
 	let replyOpen = false;
 	const toggleReply = () => {
 		replyOpen = !replyOpen;
+	};
+
+	let quoteOpen = false;
+	const toggleQuote = () => {
+		quoteOpen = !quoteOpen;
 	};
 
 	let burgerOpen = false;
@@ -34,6 +38,15 @@
 		openedUser = openedUser?.id == user.id ? undefined : user;
 	};
 
+	const prefillReply = (val: 'quote' | 'reply') => {
+		const header = fullyQualifiedAccount((reblog ?? status).account) + ' ';
+		let footer = '';
+		if (val === 'quote') {
+			footer = `\n\nRE: ${status.url}`;
+		}
+		return header + footer;
+	};
+
 	let hasBeenBookmarked = reblog?.bookmarked ?? status.bookmarked ?? false;
 	const handleBookmark = async () => {
 		if (hasBeenBookmarked) {
@@ -44,7 +57,15 @@
 	};
 
 	let replyCount = (reblog ?? status).replies_count;
-	const handleReply = async (data: api.StatusContent) => {
+	const handlePost = async (val: 'quote' | 'post', data: api.StatusContent) => {
+		if (val === 'quote') {
+			await api.postStatus({
+				...data,
+				quoting: status.id
+			});
+			toggleQuote();
+			return;
+		}
 		await api.replyToStatus(status.id, data);
 		toggleReply();
 	};
@@ -64,111 +85,14 @@
 		hasBeenBoosted = true;
 		boostCount += 1;
 	};
-
-	let isSensitive = reblog?.sensitive || status.sensitive;
-	let showSensitive = false;
-	const handleShowSensitive = () => {
-		showSensitive = !showSensitive;
-	};
 </script>
 
 <div class={highlighted ? 'border-2 border-text rounded-md relative p-2' : ' relative p-2'}>
-	<div class="flex flex-row items-center justify-between">
-		<span class="flex flex-row gap-2 items-center flex-wrap min-w-0">
-			{#if reblog}
-				<img
-					class="ml-4 rounded-md"
-					height="20"
-					width="20"
-					src={status.account.avatar}
-				/>
-				<span class="text-ellipsis whitespace-nowrap overflow-hidden max-w-[85%]">
-					<strong>
-						<RenderedContent
-							htmlContent={status.account.display_name}
-							emojis={status.account.emojis}
-						/>
-					</strong>
-				</span>
-				<button
-					on:click={() => onUserSelect(status.account)}
-					class="text-sm text-nowrap text-blue"
-				>
-					{fullyQualifiedAccount(status.account)}
-				</button>
-				<span class="subtext0">boosted</span>
-			{:else}
-				<img
-					height="30"
-					width="30"
-					class="rounded-md"
-					src={status.account.avatar}
-				/>
-				<span class="text-ellipsis whitespace-nowrap overflow-hidden max-w-[85%]">
-					<strong>
-						<RenderedContent
-							htmlContent={status.account.display_name}
-							emojis={status.account.emojis}
-						/>
-					</strong>
-				</span>
-				<button
-					on:click={() => onUserSelect(status.account)}
-					class="text-sm text-nowrap text-blue"
-				>
-					{fullyQualifiedAccount(status.account)}
-				</button>
-			{/if}
-		</span>
-
-		<div class="flex flex-row gap-3 items-center whitespace-nowrap">
-			<time datetime={createdAt.toISOString()}>
-				{formatDistanceStrict(createdAt, new Date(), { addSuffix: true })}
-			</time>
-
-			{#if status.visibility === api.StatusVisibility.DIRECT}
-				<span title="Direct">
-					<Icon
-						icon="mdi:envelope"
-						width="20"
-						height="20"
-					/>
-				</span>
-			{:else if status.visibility === api.StatusVisibility.PRIVATE}
-				<span title="Followers-only">
-					<Icon
-						icon="mdi:lock"
-						width="20"
-						height="20"
-					/>
-				</span>
-			{:else if status.visibility === api.StatusVisibility.UNLISTED}
-				<span title="Unlisted">
-					<Icon
-						icon="mdi:unlocked"
-						width="20"
-						height="20"
-					/>
-				</span>
-			{:else if status.visibility === api.StatusVisibility.PUBLIC}
-				<span title="Public">
-					<Icon
-						icon="mdi:public"
-						width="20"
-						height="20"
-					/>
-				</span>
-			{/if}
-
-			<button on:click={() => onOpen(status)}>
-				<Icon
-					icon="material-symbols:keyboard-double-arrow-down"
-					width="20"
-				/>
-			</button>
-		</div>
-	</div>
-
+	<StatusHeader
+		{status}
+		{onUserSelect}
+		onStatusExpand={onOpen}
+	/>
 	{#if openedUser}
 		<div class="bg-mantle rounded-md z-10 min-w-full border border-accent my-2">
 			<AccountView
@@ -193,146 +117,15 @@
 			/>
 			Reply to
 			<span class="text-blue gap-0">
-				{fullyQualifiedAccount(replyTo.account)}
+				{fullyQualifiedAccount(replyTo)}
 			</span>
 		</p>
 	{/if}
 
-	{#if reblog}
-		<span class="flex flex-row gap-2 items-center">
-			<img
-				class="rounded-md"
-				height="30"
-				width="30"
-				src={reblog.account.avatar}
-			/>
-			<span class="text-ellipsis whitespace-nowrap overflow-hidden max-w-[85%]">
-				<strong>
-					<RenderedContent
-						htmlContent={reblog.account.display_name}
-						emojis={reblog.account.emojis}
-					/>
-				</strong>
-			</span>
-			<button
-				on:click={() => onUserSelect(reblog.account)}
-				class="text-sm text-blue"
-			>
-				{fullyQualifiedAccount(reblog.account)}
-			</button>
-		</span>
-
-		{#if reblog.sensitive && showSensitive}
-			<div class="flex flex-col ml-10">
-				<em>
-					<RenderedContent
-						htmlContent={reblog.spoiler_text}
-						emojis={reblog.emojis}
-					/>
-				</em>
-				<hr class="bg-accent h-0.5 rounded-lg" />
-				<button
-					class="text-blue"
-					on:click={handleShowSensitive}
-				>
-					Hide content
-				</button>
-			</div>
-			<div class="text-left ml-10">
-				<RenderedContent
-					htmlContent={reblog.content}
-					emojis={reblog.emojis}
-				/>
-			</div>
-		{:else if reblog.sensitive && !showSensitive}
-			<div class="flex flex-col ml-10">
-				<em>
-					<RenderedContent
-						htmlContent={reblog.spoiler_text}
-						emojis={reblog.emojis}
-					/>
-				</em>
-				<hr class="bg-accent h-0.5 rounded-lg" />
-				<button
-					class="text-blue"
-					on:click={handleShowSensitive}
-				>
-					Show content
-				</button>
-			</div>
-		{:else}
-			<div class="text-left ml-10">
-				<RenderedContent
-					htmlContent={reblog.content}
-					emojis={reblog.emojis}
-				/>
-			</div>
-		{/if}
-	{:else if status.sensitive && showSensitive}
-		<div class="flex flex-col ml-10">
-			<em>
-				<RenderedContent
-					htmlContent={status.spoiler_text}
-					emojis={status.emojis}
-				/>
-			</em>
-			<hr class="bg-accent h-0.5 rounded-lg" />
-			<button
-				class="text-blue"
-				on:click={handleShowSensitive}
-			>
-				Hide content
-			</button>
-		</div>
-		<div class="text-left ml-10">
-			<RenderedContent
-				htmlContent={status.content}
-				emojis={status.emojis}
-			/>
-		</div>
-	{:else if status.sensitive && !showSensitive}
-		<div class="flex flex-col ml-10">
-			<em>
-				<RenderedContent
-					htmlContent={status.spoiler_text}
-					emojis={status.emojis}
-				/>
-			</em>
-			<hr class="bg-accent h-0.5 rounded-lg" />
-			<button
-				class="text-blue"
-				on:click={handleShowSensitive}
-			>
-				Show content
-			</button>
-		</div>
-	{:else}
-		<div class="text-left ml-10">
-			<RenderedContent
-				htmlContent={status.content}
-				emojis={status.emojis}
-			/>
-		</div>
-	{/if}
-
-	{#if ((isSensitive && showSensitive) || !isSensitive) && status.media_attachments.length}
-		<div
-			class="flex flex-row overflow-x-scroll gap-4 p-1 items-center justify-items-center justify-center border border-accent ml-10 mt-2 rounded-md h-[32rem]"
-		>
-			{#each status.media_attachments as attachment}
-				{#if attachment.type === api.AttachmentType.IMAGE}
-					<img
-						class="h-auto w-auto max-h-full"
-						src={attachment.remote_url}
-						alt={attachment.description ?? 'Unknown'}
-					/>
-				{:else}
-					<span>Unsupported media type {attachment.type}</span>
-					<a href={attachment.remote_url}>Click to view externally</a>
-				{/if}
-			{/each}
-		</div>
-	{/if}
+	<StatusContent
+		{status}
+		{onUserSelect}
+	/>
 
 	<div class="grid grid-flow-col items-center py-2 rounded-md gap-8 my-2 ml-10">
 		<button
@@ -371,6 +164,17 @@
 			/>
 			<span class="text-lg">{favouriteCount}</span>
 		</button>
+		<button
+			class="px-1 border-accent rounded-lg"
+			on:click={toggleQuote}
+		>
+			<Icon
+				icon="material-symbols:format-quote"
+				class="hover:text-accent text-subtext0"
+				width="25"
+				height="25"
+			/>
+		</button>
 		<button class="px-1 border-accent rounded-lg">
 			<Icon
 				icon="material-symbols:add-reaction"
@@ -391,7 +195,7 @@
 			/>
 
 			{#if burgerOpen}
-				<div class="absolute bottom-6 bg-mantle border border-accent px-4 py-2 rounded-md">
+				<div class="absolute bottom-6 right-1 bg-mantle border border-accent px-4 py-2 rounded-md">
 					<button
 						class="flex flex-row items-center gap-2"
 						on:click={handleBookmark}
@@ -407,8 +211,17 @@
 	{#if replyOpen}
 		<div class="p-2 bg-mantle rounded-md">
 			<CompositionArea
-				onPost={handleReply}
-				content={fullyQualifiedAccount((reblog ?? status).account) + ' '}
+				onPost={(d) => handlePost('post', d)}
+				content={prefillReply('reply')}
+				cw={status.sensitive ? `re: ${status.spoiler_text}` : undefined}
+			/>
+		</div>
+	{/if}
+	{#if quoteOpen}
+		<div class="p-2 bg-mantle rounded-md">
+			<CompositionArea
+				onPost={(d) => handlePost('quote', d)}
+				content={prefillReply('quote')}
 				cw={status.sensitive ? `re: ${status.spoiler_text}` : undefined}
 			/>
 		</div>

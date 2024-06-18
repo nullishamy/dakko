@@ -43,7 +43,6 @@
 
 	onMount(async () => {
 		relationship = (await api.fetchRelationships(account.id))[0];
-		console.log(relationship)
 		if (!isCondensed) {
 			accountStatuses = await api.fetchStatuses(account.id);
 		}
@@ -54,6 +53,22 @@
 			relationship = await api.unfollowUser(account.id);
 		} else {
 			relationship = await api.followUser(account.id);
+		}
+	};
+
+	const toggleMute = async () => {
+		if (relationship.muting) {
+			relationship = await api.muteUser(account.id);
+		} else {
+			relationship = await api.unmuteUser(account.id);
+		}
+	};
+
+	const toggleBlock = async () => {
+		if (relationship.blocking) {
+			relationship = await api.blockUser(account.id);
+		} else {
+			relationship = await api.unblockUser(account.id);
 		}
 	};
 </script>
@@ -109,14 +124,20 @@
 				Follow
 			{/if}
 		</button>
-		<button class="py-0.5 px-3 border border-accent rounded-md">
+		<button
+			class="py-0.5 px-3 border border-accent rounded-md"
+			on:click={toggleMute}
+		>
 			{#if relationship.muting}
 				Muted
 			{:else}
 				Mute
 			{/if}
 		</button>
-		<button class="py-0.5 px-3 border border-accent rounded-md">
+		<button
+			class="py-0.5 px-3 border border-accent rounded-md"
+			on:click={toggleBlock}
+		>
 			{#if relationship.blocking}
 				Blocked
 			{:else}

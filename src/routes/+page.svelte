@@ -10,12 +10,11 @@
 		settingsContext,
 		type Theme,
 		type Accent,
-		Filters,
-		Filter
 	} from '$lib/context';
 	import { onMount, setContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import MainContentComponent from '$lib/pane/MainContent.svelte';
+	import { Filter, Filters } from '../lib/filtering';
 
 	const instance = writable<api.Instance>();
 	const account = writable<api.Account>();

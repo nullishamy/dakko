@@ -31,7 +31,7 @@ export interface Status {
   spoiler_text: string;
   visibility: StatusVisibility;
   media_attachments: Attachment[];
-  mentions: unknown[];
+  mentions: Account[];
   tags: unknown[];
   card: unknown;
   poll: unknown;

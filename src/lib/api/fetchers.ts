@@ -41,8 +41,13 @@ export async function fetchRelationships(accountId: string): Promise<api.Relatio
   return fetch('get_relationships', { accountIds: [accountId] });
 }
 export const fetchStatuses = makeAccountAction<api.Status[]>('get_statuses')
+
 export const followUser = makeAccountAction<api.Relationship>('follow_user')
 export const unfollowUser = makeAccountAction<api.Relationship>('unfollow_user')
+export const muteUser = makeAccountAction<api.Relationship>('mute_user')
+export const unmuteUser = makeAccountAction<api.Relationship>('unumte_user')
+export const blockUser = makeAccountAction<api.Relationship>('block_user')
+export const unblockUser = makeAccountAction<api.Relationship>('unumte_user')
 
 export const bookmarkStatus = makeStatusAction<void>('bookmark_status')
 export const unbookmarkStatus = makeStatusAction<void>('unbookmark_status')
@@ -55,6 +60,7 @@ export interface StatusContent {
   content: string
   cw: string | undefined
   visibility: api.StatusVisibility
+  quoting?: string
 }
 export async function replyToStatus(statusId: string, reply: StatusContent): Promise<void> {
   return fetch('post_reply', {
@@ -68,3 +74,19 @@ export async function postStatus(status: StatusContent): Promise<api.Status> {
     status 
   })
 }
+
+export async function fetchMarker(): Promise<api.Marker> {
+  return fetch('get_markers', {
+    timelines: ['home', 'notifications']
+  })
+}
+
+export async function setMarker(lastHomeId: string): Promise<api.Marker> {
+  return fetch('save_markers', {
+    lastPostInHome: lastHomeId,
+    lastNotification: 'garbage'
+  })
+}
+
+export const acceptFollowRequest = makeAccountAction<api.Relationship>('accept_follow_request')
+export const denyFollowRequest = makeAccountAction<api.Relationship>('deny_follow_request')

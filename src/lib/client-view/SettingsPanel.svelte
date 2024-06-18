@@ -5,9 +5,9 @@
 		settingsContext,
 		type Theme,
 		type Accent,
-		Filter
 	} from '$lib/context';
 	import Icon from '@iconify/svelte';
+	import { Filter } from '../filtering';
 
 	const { theme, accent, filters } = getContext<SettingsContext>(settingsContext);
 	const handleThemeChange = (value: string) => {

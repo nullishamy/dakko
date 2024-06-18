@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { type MainContext, mainContext, type Filter } from '$lib/context';
+	import { type MainContext, mainContext } from '$lib/context';
 	import * as api from '$lib/api';
 	import Status from './Status.svelte';
 	import { openStatus } from '../utils';
 	import { getContext } from 'svelte';
+	import { Filter } from '../filtering';
 
 	export let filter: Filter;
 	export let status: api.Status;

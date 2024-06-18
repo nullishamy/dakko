@@ -44,3 +44,15 @@ export interface PollConfig {
 	min_expiration: number;
 	max_expiration: number;
 }
+
+export interface MarkerData {
+	last_read_id: string;
+	version: number;
+	updated_at: string;
+	unread_count: number | undefined;
+}
+
+export interface Marker {
+	home: MarkerData | undefined;
+	notifications: MarkerData | undefined;
+}
