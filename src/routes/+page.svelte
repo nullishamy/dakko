@@ -9,12 +9,18 @@
 		type SettingsContext,
 		settingsContext,
 		type Theme,
-		type Accent,
+		type Accent
 	} from '$lib/context';
 	import { onMount, setContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import MainContentComponent from '$lib/pane/MainContent.svelte';
 	import { Filter, Filters } from '../lib/filtering';
+	import { logger } from '$lib/log';
+	import Bootstrap from '$lib/pane/Bootstrap.svelte';
+	import { type BootstrapData } from '$lib/pane/bootstrap';
+	import { WebviewWindow } from '@tauri-apps/api/window';
+
+	logger.info('frontend starting up');
 
 	const instance = writable<api.Instance>();
 	const account = writable<api.Account>();
@@ -26,45 +32,51 @@
 		content
 	});
 
-	let theme = localStorage.getItem('theme') ?? 'latte';
-	let accent = localStorage.getItem('accent') ?? 'pink';
+	let themeValue = localStorage.getItem('theme') ?? 'latte';
+	let accentValue = localStorage.getItem('accent') ?? 'pink';
 
-	const existingFilters = JSON.parse(localStorage.getItem('filters') ?? '[]')
+	// Set the theme as early as possible, to avoid FOUC
+	document.body.classList.add(themeValue);
+	document.body.style.setProperty('--dakko-accent', `var(--ctp-${accentValue})`);
+
+	const theme = writable(themeValue as Theme);
+	const accent = writable(accentValue as Accent);
+	theme.subscribe((newTheme) => {
+		logger.info('setting new theme', newTheme);
+		localStorage.setItem('theme', newTheme);
+	});
+
+	accent.subscribe((newAccent) => {
+		logger.info('setting new accent', newAccent);
+		localStorage.setItem('accent', newAccent);
+	});
+
+	const existingFilters = JSON.parse(localStorage.getItem('filters') ?? '[]');
 
 	const filters = new Filters();
-	console.log(existingFilters);
-	
 	filters.filters = existingFilters.map((d: any) => {
-		return new Filter(d.name, d.applicationPredicate, d.code)
-	})
+		return new Filter(d.name, d.applicationPredicate, d.code);
+	});
 
-	const filtersWritable = writable(filters)
+	const filtersWritable = writable(filters);
+	filtersWritable.subscribe((newFilters) => {
+		logger.info('setting new filters', newFilters);
+		localStorage.setItem('filters', JSON.stringify(newFilters.filters));
+	});
+
+	logger.debug('existing settings:', { theme: themeValue, accent: accentValue, filters });
 	setContext<SettingsContext>(settingsContext, {
-		theme: writable(theme as Theme),
-		accent: writable(accent as Accent),
+		theme,
+		accent,
 		filters: filtersWritable
 	});
 
-	filtersWritable.subscribe(newFilters => {
-		localStorage.setItem("filters", JSON.stringify(newFilters.filters))
-	})
-
-	document.body.classList.add(theme);
-	document.body.style.setProperty('--dakko-accent', `var(--ctp-${accent})`);
-
 	let loginState: api.LoginStatus | undefined = undefined;
 
-	let authURL: string | undefined;
-	let instanceURL = 'https://labyrinth.zone';
-
-	const handleSubmit = async () => {
-		await api.setInstance(instanceURL);
-		authURL = await api.fetchLoginURL();
-		window.location.replace(authURL as string);
-	};
-
-	onMount(async () => {
+	const init = async () => {
+		logger.debug('starting initial requests');
 		loginState = await api.fetchLoginState();
+		logger.debug('got login state:', loginState);
 
 		if (loginState == api.LoginStatus.LOGGED_IN) {
 			content.set({
@@ -87,11 +99,30 @@
 			account.set(fetchedUser);
 			console.timeEnd('user_fetch');
 		}
+	};
+
+	onMount(async () => {
+		await init();
 	});
 
-	function navigateToLoginPage() {
-		window.location.replace(authURL as string);
-	}
+	const onBootstrap = (data: BootstrapData) => {
+		const webview = new WebviewWindow('auth', {
+			url: data.authURL
+		});
+		webview.once('tauri://created', function () {
+			logger.info('authorization webview created, awaiting completion');
+		});
+		webview.once('tauri://error',  (e) => {
+			logger.info('error in the authorization webview', e);
+		});
+
+		webview.listen('auth-complete', () => {
+			logger.info('authorization complete, closing webview and initializing state');
+			webview.close();
+			loginState = api.LoginStatus.LOGGED_IN;
+			init()
+		});
+	};
 </script>
 
 {#if loginState == api.LoginStatus.LOGGED_IN}
@@ -110,21 +141,8 @@
 			<NotificationPanel />
 		</section>
 	</div>
-{:else if loginState == api.LoginStatus.LOGIN_EXPIRED && authURL}
-	<button on:click={navigateToLoginPage}>Login</button>
 {:else if loginState === undefined}
 	<span>Checking login state...</span>
 {:else}
-	<form on:submit={handleSubmit}>
-		<label for="url">Your instance URL:</label>
-		<input
-			on:change={(e) => {
-				instanceURL = e.currentTarget.value;
-			}}
-			type="url"
-			name="url"
-			value={instanceURL}
-		/>
-		<button type="submit">Confirm</button>
-	</form>
+	<Bootstrap onCompletion={onBootstrap} />
 {/if}

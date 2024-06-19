@@ -34,7 +34,6 @@
 	};
 
 	const openAccount = (account: api.Account) => {
-		console.log('notification', account);
 		content.set({
 			type: 'user',
 			account

@@ -839,8 +839,10 @@ async fn authorize(
             println!("{:#?}", err);
         }
     }
+    
+    handle.emit_all("auth-complete", ()).unwrap();
 
-    "authorised; reload dakko to boot up"
+    "authorisation complete"
 }
 
 async fn run_server(handle: tauri::AppHandle) -> Result<(), axum::Error> {

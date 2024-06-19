@@ -15,20 +15,21 @@
 			return;
 		}
 
+		// Remove both the old value and the (potentially) new value
 		document.body.classList.remove(value, $theme);
+		// Then only add the new value back
 		document.body.classList.add(value);
+
 		theme.set(value as Theme);
-		localStorage.setItem('theme', value);
-	};
+	}	
 
 	const handleAccentChange = (value: string) => {
 		if (value === 'current') {
 			return;
 		}
 
-		accent.set(value as Accent);
-		localStorage.setItem('accent', value);
 		document.body.style.setProperty('--dakko-accent', `var(--ctp-${value})`);
+		accent.set(value as Accent);
 	};
 
 	const handleFilterChange = (
