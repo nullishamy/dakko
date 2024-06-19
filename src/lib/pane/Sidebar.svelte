@@ -61,7 +61,7 @@
 		on:click={openOwnAccount}
 		class="flex flex-col items-center mb-4"
 	>
-		<div class="w-[100px] h-[100px]">
+		<div class="min-w-[100px] min-h-[100px]">
 			<img
 				src={$account?.avatar}
 				alt="Avatar for {$account?.display_name}"
@@ -70,8 +70,8 @@
 				class="bg-mantle rounded-md"
 			/>
 		</div>
-		<span class="text-sm">{$account?.display_name ?? 'Your Display Name'}</span>
-		<span class="text-sm">@{$account?.username ?? 'your-username'}</span>
+		<button class="text-sm">{$account?.display_name ?? '...'}</button>
+		<span class="text-sm">@{$account?.username ?? '...'}</span>
 	</button>
 
 	<hr class="bg-accent h-0.5 w-4/5" />

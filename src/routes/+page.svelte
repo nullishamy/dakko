@@ -19,6 +19,8 @@
 	import Bootstrap from '$lib/pane/Bootstrap.svelte';
 	import { type BootstrapData } from '$lib/pane/bootstrap';
 	import { WebviewWindow } from '@tauri-apps/api/window';
+	import { Pulse } from 'svelte-loading-spinners';
+	import { LOADER_COLOR } from '../lib';
 
 	logger.info('frontend starting up');
 
@@ -112,7 +114,7 @@
 		webview.once('tauri://created', function () {
 			logger.info('authorization webview created, awaiting completion');
 		});
-		webview.once('tauri://error',  (e) => {
+		webview.once('tauri://error', (e) => {
 			logger.info('error in the authorization webview', e);
 		});
 
@@ -120,7 +122,7 @@
 			logger.info('authorization complete, closing webview and initializing state');
 			webview.close();
 			loginState = api.LoginStatus.LOGGED_IN;
-			init()
+			init();
 		});
 	};
 </script>
@@ -141,8 +143,13 @@
 			<NotificationPanel />
 		</section>
 	</div>
-{:else if loginState === undefined}
-	<span>Checking login state...</span>
-{:else}
+{:else if loginState === api.LoginStatus.LOGGED_OUT}
 	<Bootstrap onCompletion={onBootstrap} />
+{:else}
+	<div class="flex flex-col h-full items-center justify-center">
+		<span class="text-2xl font-bold flex flex-row items-center gap-4">
+			Checking login state...
+			<Pulse color={LOADER_COLOR} size={45}/>
+		</span>
+	</div>
 {/if}

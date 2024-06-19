@@ -3,6 +3,8 @@
 	import { onMount } from 'svelte';
 	import { emojiStore } from './emoji-store';
 	import { eachMonthOfInterval } from 'date-fns';
+	import { Pulse } from 'svelte-loading-spinners';
+	import { LOADER_COLOR } from '..';
 
 	export let onClose = () => {};
 	export let onSelect = (emoji: api.CustomEmoji) => {};
@@ -21,6 +23,7 @@
 	onMount(async () => {
 		if ($emojiStore) {
 			emojis = $emojiStore;
+			emojis = await api.fetchCustomEmojis();
 		} else {
 			emojis = await api.fetchCustomEmojis();
 			emojiStore.set(emojis);
@@ -44,7 +47,13 @@
 	/>
 
 	{#if emojis === undefined}
-		<span class="col-span-full">Loading...</span>
+		<span class="text-lg flex flex-row items-center gap-2 place-self-center col-span-full">
+			Loading emojis
+			<Pulse
+				color={LOADER_COLOR}
+				size={30}
+			/>
+		</span>
 	{:else}
 		{#each currentResults as emoji}
 			<button

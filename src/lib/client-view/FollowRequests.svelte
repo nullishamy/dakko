@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
 	import { fullyQualifiedAccount } from '../utils';
+	import { Pulse } from 'svelte-loading-spinners';
+	import { LOADER_COLOR } from '..';
 
 	let requests: api.FollowRequest[] | undefined = undefined;
 
@@ -20,11 +22,13 @@
 </script>
 
 <div class="flex flex-col justify-items-center px-4 gap-2">
-	<h2 class="text-xl underline mb-4">Follow requests</h2>
 	{#if requests == undefined}
-		<span>Loading</span>
+		<span class="text-xl flex flex-row items-center gap-2 place-self-center">
+			Loading follow requests
+			<Pulse color={LOADER_COLOR} size={30}/>
+		</span>
 	{:else if requests !== undefined && !requests.length}
-		<span class="text-2xl font-bold">All caught up, no requests</span>
+		<span class="text-2xl place-self-center">All caught up, no requests</span>
 	{:else}
 		{#each requests as request}
 			<div class="flex flex-row gap-2 min-h-16">

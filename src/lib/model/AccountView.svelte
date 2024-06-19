@@ -6,6 +6,8 @@
 	import Icon from '@iconify/svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 	import { openStatus } from '../utils';
+	import { Pulse } from 'svelte-loading-spinners';
+	import { LOADER_COLOR } from '..';
 
 	export let account: api.Account;
 	export let isCondensed = false;
@@ -217,7 +219,13 @@
 		</table>
 
 		{#if !accountStatuses.length}
-			<span>Loading posts..</span>
+			<span class="text-lg flex flex-row items-center gap-2">
+				Loading posts
+				<Pulse
+					color={LOADER_COLOR}
+					size={30}
+				/>
+			</span>
 		{/if}
 
 		<div class="flex flex-col gap-4">

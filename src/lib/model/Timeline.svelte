@@ -14,6 +14,8 @@
 	import Icon from '@iconify/svelte';
 	import FilterWarning from './FilterWarning.svelte';
 	import { firstPostInHome } from './timeline-store';
+	import { Pulse } from 'svelte-loading-spinners';
+	import { LOADER_COLOR } from '..';
 
 	export let timeline: api.InstanceTimeline;
 
@@ -26,6 +28,7 @@
 	export let scrollToPostId: string | undefined;
 
 	let scrollTo: Element;
+	let showLoader = false;
 
 	const fetchStatuses = (startAt?: string, append?: true, limit = 15): Promise<void> => {
 		return invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
@@ -48,9 +51,9 @@
 	};
 
 	const fetchCatchupAmount = async (sinceId: string) => {
-		const posts = await invoke(`get_${timeline}_catchup`, { sinceId })
-		return posts as number
-	}
+		const posts = await invoke(`get_${timeline}_catchup`, { sinceId });
+		return posts as number;
+	};
 
 	let openedStatus: api.Status | undefined;
 	const handleStatusOpen = async (status: api.Status) => {
@@ -65,12 +68,12 @@
 	};
 
 	export let statuses: api.Status[] = [];
-	let statusesToCatchup = 0
+	let statusesToCatchup = 0;
 	onMount(async () => {
 		if (!statuses.length) {
 			await fetchStatuses($firstPostInHome);
 			if (!$firstPostInHome) {
-				firstPostInHome.set(statuses[0].id)
+				firstPostInHome.set(statuses[0].id);
 			}
 		}
 
@@ -79,9 +82,9 @@
 
 	setInterval(async () => {
 		if ($firstPostInHome) {
-			statusesToCatchup = await fetchCatchupAmount($firstPostInHome)		
+			statusesToCatchup = await fetchCatchupAmount($firstPostInHome);
 		}
-	}, 10_000)
+	}, 10_000);
 
 	const timelines: api.InstanceTimeline[] = [
 		api.InstanceTimeline.HOME,
@@ -119,7 +122,7 @@
 		on:click={async () => {
 			statuses = [];
 			await fetchStatuses();
-			firstPostInHome.set(statuses[0].id)
+			firstPostInHome.set(statuses[0].id);
 		}}
 		class="flex flex-row items-end gap-2"
 	>
@@ -164,23 +167,35 @@
 			></div>
 		{/if}
 	{/each}
-</div>
 
-{#if !openedStatus}
-	<IntersectionObserver
-		{element}
-		on:intersect={() => {
-			const lastId = statuses[statuses.length - 1]?.id;
-			if (knownMarkers.has(lastId)) {
-				console.log('Skipping known last id', lastId);
-				return;
-			}
-			knownMarkers.add(lastId);
-			if (lastId) {
-				fetchStatuses(lastId, true, 25);
-				console.log('Fetching from', lastId);
-			}
-		}}
-	></IntersectionObserver>
-	<span class="h-2 w-12">Slow down! Loading more posts..</span>
-{/if}
+	{#if showLoader || !statuses.length}
+		<span class="text-lg flex flex-row items-center gap-2 place-self-center">
+			{showLoader ? 'Slow down! Loading more posts..' : 'Fetching your timeline..'}	
+			<Pulse
+				color={LOADER_COLOR}
+				size={30}
+			/>
+		</span>
+	{/if}
+
+	{#if !openedStatus}
+		<IntersectionObserver
+			{element}
+			on:intersect={() => {
+				showLoader = true;
+				const lastId = statuses[statuses.length - 1]?.id;
+				if (knownMarkers.has(lastId)) {
+					console.log('Skipping known last id', lastId);
+					return;
+				}
+				knownMarkers.add(lastId);
+				if (lastId) {
+					fetchStatuses(lastId, true, 25).then(() => {
+						showLoader = false;
+					});
+					console.log('Fetching from', lastId);
+				}
+			}}
+		></IntersectionObserver>
+	{/if}
+</div>

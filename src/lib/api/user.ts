@@ -39,8 +39,7 @@ export enum NotificationType {
 
 export enum LoginStatus {
 	LOGGED_IN = 'LoggedIn',
-	INSTANCE_UNKNOWN = 'InstanceUnknown',
-	LOGIN_EXPIRED = 'LoginExpired'
+	LOGGED_OUT = 'LoggedOut'
 }
 
 export interface Notification {
