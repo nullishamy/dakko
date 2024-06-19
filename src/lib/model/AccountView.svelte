@@ -12,6 +12,7 @@
 
 	export let onClose = () => {};
 	export let onOpen = (account: api.Account) => {};
+	export let showPronouns = true;
 
 	const handleStatusOpen = async (status: api.Status) => {
 		await openStatus(status, content, () => {
@@ -71,6 +72,8 @@
 			relationship = await api.unblockUser(account.id);
 		}
 	};
+
+	const pronouns = account.fields.find((p) => p.name.toLowerCase() === 'pronouns');
 </script>
 
 <div class="w-full p-8 relative">
@@ -102,12 +105,22 @@
 				{#if account.locked}
 					<Icon
 						icon="material-symbols:lock"
-						height="15"
-						width="15"
+						height="20"
+						width="20"
 					/>
 				{/if}
 			</span>
-			<span class="text-lg text-blue">@{account.username}</span>
+			<span class="text-lg text-blue flex flex-row items-center gap-4">
+				@{account.username}
+				{#if pronouns && showPronouns}
+					<span class="text-text">
+						<RenderedContent
+							htmlContent={pronouns.value}
+							emojis={account.emojis}
+						/>
+					</span>
+				{/if}
+			</span>
 		</div>
 	</div>
 

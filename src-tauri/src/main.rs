@@ -11,7 +11,7 @@ use std::{
 
 use axum::{extract::Query, response::IntoResponse, routing::get, Extension};
 use megalodon::{entities, generator, megalodon::FollowRequestOutput, oauth::TokenData, Megalodon};
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -28,22 +28,22 @@ struct AuthState {
 }
 
 struct AppState {
-    client_state: Mutex<Option<ClientState>>,
-    auth_state: Mutex<Option<AuthState>>,
-    client: Mutex<Option<Box<dyn Megalodon + Sync + Send>>>,
+    client_state: RwLock<Option<ClientState>>,
+    auth_state: RwLock<Option<AuthState>>,
+    client: RwLock<Option<Box<dyn Megalodon + Sync + Send>>>,
 
     redirect_addr: SocketAddr,
-    config_dir: Mutex<Option<PathBuf>>,
+    config_dir: RwLock<Option<PathBuf>>,
 }
 
 impl AppState {
     fn has_logged_in(&self) -> bool {
         let auth_lock = self
             .auth_state
-            .try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+            .try_read_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
         let client_lock = self
             .client
-            .try_lock_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
+            .try_read_until(Instant::now().checked_add(Duration::from_secs(10)).unwrap());
 
         if auth_lock.is_none() {
             panic!("could not acquire auth lock in time")
@@ -67,7 +67,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(file) = file {
             let client_state = serde_json::from_reader::<_, ClientState>(file).unwrap();
             let url = client_state.base_url.clone();
-            *state.client_state.lock() = Some(client_state);
+            *state.client_state.write() = Some(client_state);
 
             let mut client = generator(megalodon::SNS::Pleroma, url.clone(), None, None);
 
@@ -87,29 +87,29 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     // tauri::async_runtime::block_on(async {
                     // });
 
-                    *state.auth_state.lock() = Some(auth_state);
+                    *state.auth_state.write() = Some(auth_state);
                 }
             }
 
-            *state.client.lock() = Some(client);
+            *state.client.write() = Some(client);
         } else {
             eprintln!("No client.json found, cannot login");
         }
     }
 
-    *state.config_dir.lock() = Some(config_dir);
+    *state.config_dir.write() = Some(config_dir);
     Ok(())
 }
 
 fn save_state(state: &tauri::State<'_, AppState>) {
-    let config_dir = state.config_dir.lock();
+    let config_dir = state.config_dir.read();
     let config_dir = config_dir.as_ref().unwrap();
     fs::create_dir_all(&config_dir).unwrap();
 
     {
         let path = config_dir.join("auth.json");
         let content =
-            serde_json::to_string_pretty(&state.auth_state.lock().as_ref().unwrap().clone())
+            serde_json::to_string_pretty(&state.auth_state.read().as_ref().unwrap().clone())
                 .unwrap();
         let mut file = File::create(path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
@@ -118,7 +118,7 @@ fn save_state(state: &tauri::State<'_, AppState>) {
     {
         let path = config_dir.join("client.json");
         let content =
-            serde_json::to_string_pretty(&state.client_state.lock().as_ref().unwrap().clone())
+            serde_json::to_string_pretty(&state.client_state.read().as_ref().unwrap().clone())
                 .unwrap();
         let mut file = File::create(path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
@@ -166,10 +166,10 @@ fn main() {
             deny_follow_request
         ])
         .manage(AppState {
-            client: Mutex::new(None),
-            client_state: Mutex::new(None),
-            auth_state: Mutex::new(None),
-            config_dir: Mutex::new(None),
+            client: RwLock::new(None),
+            client_state: RwLock::new(None),
+            auth_state: RwLock::new(None),
+            config_dir: RwLock::new(None),
             redirect_addr: socket_addr,
         })
         .run(tauri::generate_context!())
@@ -192,7 +192,7 @@ async fn post_reply(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let sensitive = reply.cw.is_some();
@@ -222,7 +222,7 @@ async fn post_status(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let sensitive = status.cw.is_some();
@@ -252,7 +252,7 @@ async fn favourite_status(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.favourite_status(id).await.map_err(|_| ())?;
@@ -263,7 +263,7 @@ async fn favourite_status(
 async fn get_bookmarks(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_bookmarks(None).await.map_err(|_| ())?;
@@ -274,7 +274,7 @@ async fn get_bookmarks(state: tauri::State<'_, AppState>) -> Result<Vec<entities
 async fn get_emojis(state: tauri::State<'_, AppState>) -> Result<Vec<entities::Emoji>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_instance_custom_emojis().await.map_err(|_| ())?;
@@ -287,7 +287,7 @@ async fn get_follow_requests(
 ) -> Result<Vec<entities::Account>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_follow_requests(None).await.map_err(|_| ())?;
@@ -310,7 +310,7 @@ async fn get_statuses(
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetAccountStatusesInputOptions {
@@ -332,7 +332,7 @@ async fn get_markers(
 ) -> Result<entities::Marker, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_markers(timelines).await.map_err(|_| ())?;
@@ -343,7 +343,7 @@ async fn get_markers(
 async fn get_status(id: String, state: tauri::State<'_, AppState>) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_status(id).await.map_err(|_| ())?;
@@ -358,7 +358,7 @@ async fn save_markers(
 ) -> Result<entities::Marker, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::SaveMarkersInputOptions {
@@ -381,7 +381,7 @@ async fn get_relationships(
 ) -> Result<Vec<entities::Relationship>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client
@@ -398,7 +398,7 @@ async fn boost_status(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.reblog_status(id).await.unwrap();
@@ -407,7 +407,7 @@ async fn boost_status(
 
 #[tauri::command]
 async fn get_instance(state: tauri::State<'_, AppState>) -> Result<entities::Instance, ()> {
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.get_instance().await.map_err(|_| ())?;
@@ -418,7 +418,7 @@ async fn get_instance(state: tauri::State<'_, AppState>) -> Result<entities::Ins
 async fn get_user(state: tauri::State<'_, AppState>) -> Result<entities::Account, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.verify_account_credentials().await.map_err(|_| ())?;
@@ -432,7 +432,7 @@ async fn bookmark_status(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.bookmark_status(id).await.unwrap();
@@ -446,7 +446,7 @@ async fn unbookmark_status(
 ) -> Result<entities::Status, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.unbookmark_status(id).await.unwrap();
@@ -460,7 +460,7 @@ async fn accept_follow_request(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.accept_follow_request(id).await.map_err(|_| ())?;
@@ -474,7 +474,7 @@ async fn deny_follow_request(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.reject_follow_request(id).await.map_err(|_| ())?;
@@ -488,7 +488,7 @@ async fn follow_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.follow_account(id, None).await.map_err(|_| ())?;
@@ -502,7 +502,7 @@ async fn unfollow_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.unfollow_account(id).await.map_err(|_| ())?;
@@ -516,7 +516,7 @@ async fn block_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.block_account(id).await.map_err(|_| ())?;
@@ -530,7 +530,7 @@ async fn unblock_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.unblock_account(id).await.map_err(|_| ())?;
@@ -544,7 +544,7 @@ async fn mute_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.mute_account(id, false).await.map_err(|_| ())?;
@@ -558,7 +558,7 @@ async fn unmute_user(
 ) -> Result<entities::Relationship, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let res = client.unmute_account(id).await.map_err(|_| ())?;
@@ -572,7 +572,7 @@ async fn get_notifications(
 ) -> Result<Vec<entities::Notification>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetNotificationsInputOptions {
@@ -595,7 +595,7 @@ async fn get_home_catchup(
 ) -> Result<usize, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetHomeTimelineInputOptions {
@@ -618,7 +618,7 @@ async fn get_home_timeline(
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetHomeTimelineInputOptions {
@@ -641,7 +641,7 @@ async fn get_public_timeline(
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetPublicTimelineInputOptions {
@@ -663,7 +663,7 @@ async fn get_conversation(
 ) -> Result<entities::Context, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetStatusContextInputOptions {
@@ -685,7 +685,7 @@ async fn get_local_timeline(
 ) -> Result<Vec<entities::Status>, ()> {
     assert!(state.has_logged_in());
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
     let options = megalodon::megalodon::GetLocalTimelineInputOptions {
@@ -702,9 +702,8 @@ async fn get_local_timeline(
 
 #[tauri::command]
 async fn set_instance(url: String, state: tauri::State<'_, AppState>) -> Result<(), ()> {
-    let mut client_state = state.client_state.lock();
-
-    let mut client = state.client.lock();
+    let mut client_state = state.client_state.write();
+    let mut client = state.client.write();
 
     *client_state = Some(ClientState {
         base_url: url.clone(),
@@ -761,10 +760,10 @@ async fn login(
         ..Default::default()
     };
 
-    let client = state.client.lock();
+    let client = state.client.read();
     let client = client.as_ref().unwrap();
 
-    let mut client_state = state.client_state.lock();
+    let mut client_state = state.client_state.write();
     let client_state = client_state.as_mut().unwrap();
 
     match client.register_app(String::from("dakko"), &options).await {
@@ -801,10 +800,10 @@ async fn authorize(
 ) -> impl IntoResponse {
     let state = handle.state::<AppState>();
 
-    let mut client_lock = state.client.lock();
+    let mut client_lock = state.client.write();
     let client = client_lock.as_mut().unwrap();
 
-    let client_state_lock = state.client_state.lock();
+    let client_state_lock = state.client_state.read();
     let client_state = client_state_lock.as_ref().unwrap();
 
     let client_id = client_state.client_id.clone();
@@ -828,7 +827,7 @@ async fn authorize(
                 Some(token_data.access_token.clone()),
                 None,
             );
-            *state.auth_state.lock() = Some(AuthState { token: token_data });
+            *state.auth_state.write() = Some(AuthState { token: token_data });
 
             // Drop our locks before save_state acquires them
             drop(client_lock);

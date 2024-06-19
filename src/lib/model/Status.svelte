@@ -49,8 +49,6 @@
 		await api.replyToStatus(status.id, data);
 		replyOpen = false;
 	};
-
-  const pronouns = (reblog ?? status).account.fields.find(p => p.name.toLowerCase() === 'pronouns')
 </script>
 
 <div class={highlighted ? 'border-2 border-text rounded-md p-2' : 'p-2'}>
@@ -124,15 +122,6 @@
 						@{reblog.account.acct}
 					</button>
 
-          {#if pronouns}
-            <span class="font-normal">
-              <RenderedContent 
-                htmlContent={`(${pronouns.value.slice(0, 30)})`}
-                emojis={reblog.account.emojis}
-              />
-            </span>
-          {/if}
-
 					<div class="flex-grow" />
 
 					<StatusControls
@@ -158,15 +147,6 @@
 					>
 						@{status.account.acct}
 					</button>
-
-          {#if pronouns}
-            <span class="font-normal">
-              <RenderedContent 
-                htmlContent={`(${pronouns.value.slice(0, 30)})`}
-                emojis={status.account.emojis}
-              />
-            </span>
-          {/if}
 
 					<div class="flex-grow" />
 
