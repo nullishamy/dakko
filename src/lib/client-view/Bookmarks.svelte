@@ -33,11 +33,14 @@
 	{:else if bookmarks !== undefined && !bookmarks.length}
 		<span>No bookmarks found</span>
 	{:else}
+		<div class="flex flex-col gap-8 px-2">
 		{#each bookmarks as bookmark}
 			<Status
 				status={bookmark}
 				onOpen={handleStatusOpen}
 			/>
 		{/each}
+		</div>
+
 	{/if}
 </div>

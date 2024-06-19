@@ -4,12 +4,13 @@
 	import CompositionArea from '$lib/generic/CompositionArea.svelte';
 	import { fullyQualifiedAccount } from '$lib/utils';
 	import Icon from '@iconify/svelte';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import AccountView from './AccountView.svelte';
 	import StatusControls from './status/StatusControls.svelte';
 	import StatusContent from './status/StatusContent.svelte';
 	import RenderedContent from '../generic/RenderedContent.svelte';
 	import StatusButtons from './status/StatusButtons.svelte';
+	import StatusPoll from './status/StatusPoll.svelte';
 
 	export let onOpen: (status: api.Status) => void;
 	export let highlighted: boolean = false;
@@ -109,12 +110,12 @@
 
 			{#if reblog}
 				<div class="flex flex-row items-center gap-2 font-bold">
-          <span class="min-w-max">
-            <RenderedContent
-              htmlContent={reblog.account.display_name}
-              emojis={reblog.account.emojis}
-            />
-          </span>
+					<span class="min-w-max">
+						<RenderedContent
+							htmlContent={reblog.account.display_name}
+							emojis={reblog.account.emojis}
+						/>
+					</span>
 					<button
 						class="text-blue font-normal"
 						on:click={() => onUserSelect(reblog.account)}
@@ -135,12 +136,12 @@
 				</div>
 			{:else}
 				<div class="flex flex-row items-center gap-2 font-bold">
-          <span>
-            <RenderedContent
-              htmlContent={status.account.display_name}
-              emojis={status.account.emojis}
-            />
-          </span>
+					<span>
+						<RenderedContent
+							htmlContent={status.account.display_name}
+							emojis={status.account.emojis}
+						/>
+					</span>
 					<button
 						class="text-blue font-normal"
 						on:click={() => onUserSelect(status.account)}
@@ -171,6 +172,10 @@
 				<div class="mt-1">
 					<StatusContent {status} />
 				</div>
+			{/if}
+
+			{#if status.poll}
+				<StatusPoll poll={status.poll} />
 			{/if}
 
 			<StatusButtons

@@ -88,5 +88,12 @@ export async function setMarker(lastHomeId: string): Promise<api.Marker> {
   })
 }
 
+export async function voteForPoll(poll: api.Poll, choices: number[]): Promise<api.Poll> {
+  return fetch('vote_for_poll', {
+    pollId: poll.id,
+    choices
+  })
+}
+
 export const acceptFollowRequest = makeAccountAction<api.Relationship>('accept_follow_request')
 export const denyFollowRequest = makeAccountAction<api.Relationship>('deny_follow_request')

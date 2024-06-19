@@ -38,6 +38,7 @@ fn main() {
             status::get_status,
             status::bookmark_status,
             status::unbookmark_status,
+            status::vote_for_poll,
             timeline::get_home_timeline,
             timeline::get_public_timeline,
             timeline::get_conversation,

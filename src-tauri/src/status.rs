@@ -139,3 +139,19 @@ pub async fn unbookmark_status(
     let res = client.unbookmark_status(id).await.unwrap();
     Ok(res.json())
 }
+
+
+#[tauri::command]
+pub async fn vote_for_poll(
+    poll_id: String,
+    choices: Vec<u32>,
+    state: tauri::State<'_, AppState>,
+) -> Result<entities::Poll, ()> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.read();
+    let client = client.as_ref().unwrap();
+
+    let res = client.vote_poll(poll_id, choices, None).await.unwrap();
+    Ok(res.json())
+}
