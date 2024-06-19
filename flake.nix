@@ -32,11 +32,10 @@
     in
     {
       devShells = forEachSystem (
-        { pkgs, system }:
+        { pkgs, ... }:
         {
           default =
             let
-
               libraries = with pkgs; [
                 webkitgtk
                 gtk3
@@ -90,11 +89,8 @@
 
       packages = forEachSystem (
         { pkgs, system }:
-        let
-          pkg = pkgs.callPackage ./package.nix { };
-        in
         {
-          dakko = pkg;
+          dakko = pkgs.callPackage ./package.nix { };
           default = self.packages.${system}.dakko;
         }
       );

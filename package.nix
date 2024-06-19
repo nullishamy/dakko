@@ -14,7 +14,6 @@
   openssl_3,
   librsvg,
   cargo-tauri,
-  gsettings-desktop-schemas,
   yarn,
   makeWrapper,
 }:
@@ -90,7 +89,12 @@ rustPlatform.buildRustPackage {
     makeWrapper
     glib-networking
   ];
-  nativeBuildInputs = [ pkg-config cargo-tauri yarn ];
+
+  nativeBuildInputs = [
+    pkg-config
+    cargo-tauri
+    yarn
+  ];
 
   doCheck = false;
 
