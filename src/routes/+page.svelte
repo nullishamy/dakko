@@ -36,6 +36,7 @@
 
 	let themeValue = localStorage.getItem('theme') ?? 'latte';
 	let accentValue = localStorage.getItem('accent') ?? 'pink';
+	let fontValue = localStorage.getItem('font') ?? '';
 
 	// Set the theme as early as possible, to avoid FOUC
 	document.body.classList.add(themeValue);
@@ -43,6 +44,7 @@
 
 	const theme = writable(themeValue as Theme);
 	const accent = writable(accentValue as Accent);
+	const font = writable(fontValue);
 	theme.subscribe((newTheme) => {
 		logger.info('setting new theme', newTheme);
 		localStorage.setItem('theme', newTheme);
@@ -53,6 +55,17 @@
 		localStorage.setItem('accent', newAccent);
 	});
 
+	const el = document.querySelector('html');
+	if (!el) {
+		throw new TypeError('no html element');
+	}
+
+	font.subscribe((newFont) => {
+		logger.info('setting new font', newFont);
+
+		el.style.fontFamily = fontValue;
+		localStorage.setItem('font', newFont);
+	});
 	const existingFilters = JSON.parse(localStorage.getItem('filters') ?? '[]');
 
 	const filters = new Filters();
@@ -66,10 +79,16 @@
 		localStorage.setItem('filters', JSON.stringify(newFilters.filters));
 	});
 
-	logger.debug('existing settings:', { theme: themeValue, accent: accentValue, filters });
+	logger.debug('existing settings:', {
+		theme: themeValue,
+		accent: accentValue,
+		filters,
+		font: fontValue
+	});
 	setContext<SettingsContext>(settingsContext, {
 		theme,
 		accent,
+		font,
 		filters: filtersWritable
 	});
 
@@ -149,7 +168,10 @@
 	<div class="flex flex-col h-full items-center justify-center">
 		<span class="text-2xl font-bold flex flex-row items-center gap-4">
 			Checking login state...
-			<Pulse color={LOADER_COLOR} size={45}/>
+			<Pulse
+				color={LOADER_COLOR}
+				size={45}
+			/>
 		</span>
 	</div>
 {/if}

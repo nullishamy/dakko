@@ -64,6 +64,7 @@ export interface SettingsContext {
 	theme: Writable<Theme>;
 	accent: Writable<Accent>;
 	filters: Writable<Filters>;
+	font: Writable<string>;
 }
 
 export const settingsContext = {};

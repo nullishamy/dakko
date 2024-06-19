@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import {
-		type SettingsContext,
-		settingsContext,
-		type Theme,
-		type Accent,
-	} from '$lib/context';
+	import { type SettingsContext, settingsContext, type Theme, type Accent } from '$lib/context';
 	import Icon from '@iconify/svelte';
 	import { Filter } from '../filtering';
 
-	const { theme, accent, filters } = getContext<SettingsContext>(settingsContext);
+	const { theme, accent, filters, font } = getContext<SettingsContext>(settingsContext);
 	const handleThemeChange = (value: string) => {
 		if (value === 'current') {
 			return;
@@ -21,7 +16,7 @@
 		document.body.classList.add(value);
 
 		theme.set(value as Theme);
-	}	
+	};
 
 	const handleAccentChange = (value: string) => {
 		if (value === 'current') {
@@ -62,12 +57,22 @@
 	const removeFilter = (filter: Filter) => {
 		filters.set($filters.removeFilter(filter));
 	};
+
+	const el = document.querySelector('html')
+	if (!el) {
+		throw new TypeError('no html element')
+	}
+
+	let fontBinding = $font || el.style.fontFamily || 'ui-sans-serif, system-ui, sans-serif';
+	const setFont = () => {
+		font.set(fontBinding)
+	};
 </script>
 
 <section class="flex flex-col items-center m-4 mx-12 gap-8">
 	<h1 class="text-2xl">Settings</h1>
 
-	<div class="w-full border border-accent rounded-md p-4">
+	<div class="w-full border border-accent rounded-md p-4 flex flex-col gap-2">
 		<label
 			for="theme"
 			class="text-lg underline"
@@ -93,7 +98,7 @@
 		</select>
 	</div>
 
-	<div class="w-full border border-accent rounded-md p-4">
+	<div class="w-full border border-accent rounded-md p-4 flex flex-col gap-2">
 		<label
 			for="accent"
 			class="text-lg underline"
@@ -127,6 +132,11 @@
 			<option value="blue">Blue</option>
 			<option value="lavender">Lavender</option>
 		</select>
+	</div>
+
+	<div class="w-full border border-accent rounded-md p-4 flex flex-col gap-4">
+		<span class="text-lg underline">Font</span>
+		<textarea class="rounded-md bg-mantle text-text" bind:value={fontBinding} on:keyup={setFont}/>
 	</div>
 
 	<div class="w-full border border-accent rounded-md p-4 flex flex-col gap-4">

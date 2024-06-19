@@ -30,7 +30,7 @@
 	let scrollTo: Element;
 	let showLoader = false;
 
-	const fetchStatuses = (startAt?: string, append?: true, limit = 15): Promise<void> => {
+	const fetchStatuses = (startAt?: string, append?: true, limit = 25): Promise<void> => {
 		return invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
 			const res = _res as api.Status[];
 			res
