@@ -64,14 +64,20 @@ rustPlatform.buildRustPackage {
   buildType = "debug";
 
   buildPhase = ''
+    runHook preBuild
     cargo tauri build
+    runHook postBuild
   '';
 
   installPhase = ''
+    runHook preInstall
+
     mkdir -p $out/bin
     makeWrapper target/release/dakko $out/bin/dakko \
      --set WEBKIT_DISABLE_COMPOSITING_MODE 1 \
      --prefix GIO_MODULE_DIR : ${glib-networking}/lib/gio/modules/
+
+    runHook postInstall
   '';
 
   buildInputs = [
