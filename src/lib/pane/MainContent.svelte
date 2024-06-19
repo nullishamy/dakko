@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import { type MainContext, mainContext } from '$lib/context';
 	import Timeline from '$lib/model/Timeline.svelte';
+	import Error from '$lib/pane/Error.svelte';
 	import AccountView from '$lib/model/AccountView.svelte';
 	import ClientContent from '../client-view/ClientContent.svelte';
 	import ExpandedStatus from '../model/ExpandedStatus.svelte';
@@ -23,6 +24,8 @@
 	<ExpandedStatus statusContent={$content} />
 {:else if $content?.type == 'client'}
 	<ClientContent content={$content} />
+{:else if $content?.type == 'error'}
+	<Error message={$content.message} />
 {:else}
 	<div class="flex flex-col h-full items-center">
 		<span class="text-xl flex flex-row items-center gap-4">

@@ -1,6 +1,7 @@
 import * as api from '$lib/api';
 import { type MainContent } from './context';
 import type { Writable } from 'svelte/store';
+import { logger } from './log';
 
 export function capitalise(str: string): string {
 	if (!str) {
@@ -38,4 +39,12 @@ export async function openStatus(status: api.Status, content: Writable<MainConte
 		statusContext: ctx,
 		onReturn
 	});
+}
+
+export function showError(content: Writable<MainContent>, error: unknown, context = "unknown context") {
+	logger.error('ctx', context, JSON.stringify(error))
+	content.set({
+		type: 'error',
+		message: `ctx: ${context} - ${JSON.stringify(error)}` 
+	})
 }

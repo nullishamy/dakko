@@ -1,26 +1,38 @@
 <script lang="ts">
 	import Notification from '$lib/model/Notification.svelte';
 	import * as api from '$lib/api';
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { Pulse } from 'svelte-loading-spinners';
 	import { LOADER_COLOR } from '..';
+	import { showError } from '../utils';
+	import { type MainContext, mainContext } from '../context';
+
+	const { content } = getContext<MainContext>(mainContext);
 
 	let notifications: api.Notification[] = [];
 
 	onMount(async () => {
-		notifications = await api.fetchNotifications();
+		try {
+			notifications = await api.fetchNotifications();
+		} catch (err) {
+			showError(content, err, "when fetching notifications")
+		}
 	});
 
 	setInterval(async () => {
-		const newNotifications = await api.fetchNotifications(notifications[0].id);
-		notifications = [...newNotifications, ...notifications]
+		try {
+			const newNotifications = await api.fetchNotifications(notifications[0]?.id);
+			notifications = [...newNotifications, ...notifications];
+		} catch (err) {
+			showError(content, err, "when fetching notifications (infrequent task)");
+		}
 	}, 15_000);
 </script>
 
 <div class="flex flex-row items-center p-2 w-full">
 	<h2 class="text-xl">Notifications</h2>
-	<div class="flex-grow"/>
+	<div class="flex-grow" />
 	<button
 		on:click={async () => {
 			notifications = [];

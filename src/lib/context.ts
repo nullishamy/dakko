@@ -27,12 +27,17 @@ export interface NoContent {
 	type: 'none';
 }
 
+export interface ErrorContent {
+	type: 'error';
+	message: string
+}
+
 export interface ClientContent {
 	type: 'client';
 	menu: 'settings' | 'follow_requests' | 'bookmarks';
 }
 
-export type MainContent = TimelineContent | UserContent | NoContent | StatusContent | ClientContent;
+export type MainContent = TimelineContent | UserContent | NoContent | StatusContent | ClientContent | ErrorContent;
 
 export interface MainContext {
 	instance: Writable<api.Instance>;

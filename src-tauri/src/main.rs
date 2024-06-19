@@ -14,6 +14,7 @@ mod status;
 mod timeline;
 mod user;
 mod init;
+mod error;
 
 
 fn main() {

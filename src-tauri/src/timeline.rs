@@ -1,18 +1,19 @@
 use megalodon::entities;
 
 use crate::state::AppState;
+use crate::error;
 
 #[tauri::command]
 pub async fn get_markers(
     timelines: Vec<String>,
     state: tauri::State<'_, AppState>,
-) -> Result<entities::Marker, ()> {
+) -> Result<entities::Marker, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
     let client = client.as_ref().unwrap();
 
-    let res = client.get_markers(timelines).await.map_err(|_| ())?;
+    let res = client.get_markers(timelines).await?;
     Ok(res.json())
 }
 
@@ -21,7 +22,7 @@ pub async fn save_markers(
     last_post_in_home: String,
     last_notification: String,
     state: tauri::State<'_, AppState>,
-) -> Result<entities::Marker, ()> {
+) -> Result<entities::Marker, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -36,7 +37,7 @@ pub async fn save_markers(
         }),
     };
 
-    let res = client.save_markers(Some(&options)).await.unwrap();
+    let res = client.save_markers(Some(&options)).await?;
     Ok(res.json())
 }
 
@@ -44,7 +45,7 @@ pub async fn save_markers(
 pub async fn get_home_catchup(
     since_id: String,
     state: tauri::State<'_, AppState>,
-) -> Result<usize, ()> {
+) -> Result<usize, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -55,10 +56,7 @@ pub async fn get_home_catchup(
         ..Default::default()
     };
 
-    let res = client
-        .get_home_timeline(Some(&options))
-        .await
-        .map_err(|_| ())?;
+    let res = client.get_home_timeline(Some(&options)).await?;
     Ok(res.json().len())
 }
 
@@ -67,7 +65,7 @@ pub async fn get_home_timeline(
     start_at: Option<String>,
     limit: u32,
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<entities::Status>, ()> {
+) -> Result<Vec<entities::Status>, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -79,10 +77,7 @@ pub async fn get_home_timeline(
         ..Default::default()
     };
 
-    let res = client
-        .get_home_timeline(Some(&options))
-        .await
-        .map_err(|_| ())?;
+    let res = client.get_home_timeline(Some(&options)).await?;
     Ok(res.json())
 }
 
@@ -90,7 +85,7 @@ pub async fn get_home_timeline(
 pub async fn get_public_timeline(
     state: tauri::State<'_, AppState>,
     limit: u32,
-) -> Result<Vec<entities::Status>, ()> {
+) -> Result<Vec<entities::Status>, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -101,10 +96,7 @@ pub async fn get_public_timeline(
         ..Default::default()
     };
 
-    let res = client
-        .get_public_timeline(Some(&options))
-        .await
-        .map_err(|_| ())?;
+    let res = client.get_public_timeline(Some(&options)).await?;
     Ok(res.json())
 }
 
@@ -112,7 +104,7 @@ pub async fn get_public_timeline(
 pub async fn get_conversation(
     entry_point: String,
     state: tauri::State<'_, AppState>,
-) -> Result<entities::Context, ()> {
+) -> Result<entities::Context, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -125,8 +117,7 @@ pub async fn get_conversation(
 
     let res = client
         .get_status_context(entry_point, Some(&options))
-        .await
-        .map_err(|_| ())?;
+        .await?;
     Ok(res.json())
 }
 
@@ -134,7 +125,7 @@ pub async fn get_conversation(
 pub async fn get_local_timeline(
     limit: u32,
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<entities::Status>, ()> {
+) -> Result<Vec<entities::Status>, error::DakkoError> {
     assert!(state.has_logged_in());
 
     let client = state.client.read();
@@ -145,9 +136,6 @@ pub async fn get_local_timeline(
         ..Default::default()
     };
 
-    let res = client
-        .get_local_timeline(Some(&options))
-        .await
-        .map_err(|_| ())?;
+    let res = client.get_local_timeline(Some(&options)).await?;
     Ok(res.json())
 }

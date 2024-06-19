@@ -3,7 +3,7 @@
 	import Status from './Status.svelte';
 	import IntersectionObserver from 'svelte-intersection-observer';
 	import * as api from '$lib/api';
-	import { capitalise, openStatus } from '$lib/utils';
+	import { capitalise, openStatus, showError } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import {
 		type MainContext,
@@ -71,7 +71,13 @@
 	let statusesToCatchup = 0;
 	onMount(async () => {
 		if (!statuses.length) {
-			await fetchStatuses($firstPostInHome);
+			try {
+				await fetchStatuses($firstPostInHome);
+			} catch (err) {
+				showError(content, err, "when fetching timeline")
+				return
+			}
+
 			if (!$firstPostInHome) {
 				firstPostInHome.set(statuses[0].id);
 			}
@@ -82,7 +88,11 @@
 
 	setInterval(async () => {
 		if ($firstPostInHome) {
-			statusesToCatchup = await fetchCatchupAmount($firstPostInHome);
+			try {
+				statusesToCatchup = await fetchCatchupAmount($firstPostInHome);
+			} catch (err) {
+				showError(content, err, "when fetching timeline catchup")
+			}
 		}
 	}, 10_000);
 
