@@ -62,24 +62,26 @@
               ];
             in
             pkgs.mkShell {
-              buildInputs = packages;
+              env = {
+                LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH";
+                XDG_DATA_DIRS = "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS";
+                GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules/";
+              };
 
-              shellHook = ''
-                export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-                export XDG_DATA_DIRS=${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS
-                export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules/";
-              '';
-              packages = with pkgs; [
-                nodejs_20
-                nodePackages.yarn
-                (rust-bin.stable.latest.default.override {
-                  extensions = [
-                    "rust-src"
-                    "rust-analyzer"
-                    "clippy"
-                  ];
-                })
-              ];
+              packages =
+                with pkgs;
+                [
+                  nodejs_20
+                  nodePackages.yarn
+                  (rust-bin.stable.latest.default.override {
+                    extensions = [
+                      "rust-src"
+                      "rust-analyzer"
+                      "clippy"
+                    ];
+                  })
+                ]
+                ++ packages;
             };
         }
       );
