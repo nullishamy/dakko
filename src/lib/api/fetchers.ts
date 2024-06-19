@@ -1,5 +1,6 @@
 import * as api from '$lib/api';
 import { invoke } from '@tauri-apps/api';
+import type { InstanceType } from '../pane/bootstrap';
 
 function makeSimpleFetcher<T>(key: string): () => Promise<T> {
   return () => fetch(key);
@@ -21,8 +22,8 @@ export const fetchLoginState = makeSimpleFetcher<api.LoginStatus>('login_state')
 export const fetchInstance = makeSimpleFetcher<api.Instance>('get_instance');
 export const fetchSelf = makeSimpleFetcher<api.Account>('get_user');
 
-export async function setInstance(instanceURL: string): Promise<void> {
-  return fetch('set_instance', { url: instanceURL });
+export async function setInstance(instanceURL: string, instanceType: InstanceType): Promise<void> {
+  return fetch('set_instance', { url: instanceURL, instanceType });
 }
 export const fetchLoginURL = makeSimpleFetcher<string>('login');
 export const fetchBookmarks = makeSimpleFetcher<api.Status[]>('get_bookmarks');

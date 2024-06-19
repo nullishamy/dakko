@@ -86,6 +86,7 @@ pub async fn login(
                 client_id,
                 client_secret,
                 base_url: client_state.base_url.clone(),
+                instance_type: client_state.instance_type.clone()
             };
 
             tauri::async_runtime::spawn(async move { run_server(handle).await });

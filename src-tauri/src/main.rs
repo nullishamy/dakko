@@ -3,7 +3,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use megalodon::generator;
+use megalodon::{generator, SNS};
 use parking_lot::RwLock;
 use state::{AppState, ClientState};
 
@@ -69,7 +69,7 @@ fn main() {
 }
 
 #[tauri::command]
-async fn set_instance(url: String, state: tauri::State<'_, AppState>) -> Result<(), ()> {
+async fn set_instance(url: String, instance_type: SNS, state: tauri::State<'_, AppState>) -> Result<(), ()> {
     let mut client_state = state.client_state.write();
     let mut client = state.client.write();
 
@@ -77,9 +77,10 @@ async fn set_instance(url: String, state: tauri::State<'_, AppState>) -> Result<
         base_url: url.clone(),
         client_id: "".to_string(),
         client_secret: "".to_string(),
+        instance_type: instance_type.clone()
     });
 
-    *client = Some(generator(megalodon::SNS::Pleroma, url, None, None));
+    *client = Some(generator(instance_type, url, None, None));
 
     Ok(())
 }

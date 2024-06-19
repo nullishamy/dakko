@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use megalodon::{oauth::TokenData, Megalodon};
+use megalodon::{oauth::TokenData, Megalodon, SNS};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +13,7 @@ pub struct ClientState {
     pub client_id: String,
     pub client_secret: String,
     pub base_url: String,
+    pub instance_type: SNS
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
