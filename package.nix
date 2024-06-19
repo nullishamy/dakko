@@ -58,8 +58,7 @@ rustPlatform.buildRustPackage {
 
   postPatch = ''
     substituteInPlace tauri.conf.json --replace-fail '"distDir": "../build"' '"distDir": "${frontend-build}/build"'
-    substituteInPlace tauri.conf.json --replace-fail '"beforeBuildCommand": "yarn build",' '"beforeBuildCommand": "",'
-    substituteInPlace tauri.conf.json --replace-fail '"beforeDevCommand": "yarn dev",' '"beforeDevCommand": "",'
+    substituteInPlace tauri.conf.json --replace-fail '"beforeBuildCommand": "yarn build"' '"beforeBuildCommand": ""'
   '';
 
   buildType = "debug";
