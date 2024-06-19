@@ -69,8 +69,7 @@ rustPlatform.buildRustPackage {
 
   installPhase = ''
     mkdir -p $out/bin
-    mv target/release/dakko $out/bin/dakko_unwrapped
-    makeWrapper $out/bin/dakko_unwrapped $out/bin/dakko \
+    makeWrapper target/release/dakko $out/bin/dakko \
      --set WEBKIT_DISABLE_COMPOSITING_MODE 1 \
      --prefix GIO_MODULE_DIR : ${glib-networking}/lib/gio/modules/
   '';
