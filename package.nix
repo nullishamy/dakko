@@ -1,9 +1,8 @@
 {
   lib,
-  fetchFromGitHub,
   fetchYarnDeps,
   gtk3,
-  libsoup,
+  glib-networking,
   mkYarnPackage,
   pkg-config,
   rustPlatform,
@@ -15,8 +14,9 @@
   openssl_3,
   librsvg,
   cargo-tauri,
+  gsettings-desktop-schemas,
   yarn,
-  makeWrapper
+  makeWrapper,
 }:
 
 let
@@ -59,9 +59,9 @@ rustPlatform.buildRustPackage {
   };
 
   postPatch = ''
-    substituteInPlace tauri.conf.json --replace '"distDir": "../build"' '"distDir": "${frontend-build}/build"'
-    substituteInPlace tauri.conf.json --replace '"beforeBuildCommand": "yarn build",' '"beforeBuildCommand": "",'
-    substituteInPlace tauri.conf.json --replace '"beforeDevCommand": "yarn dev",' '"beforeDevCommand": "",'
+    substituteInPlace tauri.conf.json --replace-fail '"distDir": "../build"' '"distDir": "${frontend-build}/build"'
+    substituteInPlace tauri.conf.json --replace-fail '"beforeBuildCommand": "yarn build",' '"beforeBuildCommand": "",'
+    substituteInPlace tauri.conf.json --replace-fail '"beforeDevCommand": "yarn dev",' '"beforeDevCommand": "",'
   '';
 
   buildType = "debug";
@@ -74,7 +74,8 @@ rustPlatform.buildRustPackage {
     mkdir -p $out/bin
     mv target/release/dakko $out/bin/dakko_unwrapped
     makeWrapper $out/bin/dakko_unwrapped $out/bin/dakko \
-      --set WEBKIT_DISABLE_COMPOSITING_MODE 1
+     --set WEBKIT_DISABLE_COMPOSITING_MODE 1 \
+     --prefix GIO_MODULE_DIR : ${glib-networking}/lib/gio/modules/
   '';
 
   buildInputs = [
@@ -87,6 +88,7 @@ rustPlatform.buildRustPackage {
     openssl_3
     librsvg
     makeWrapper
+    glib-networking
   ];
   nativeBuildInputs = [ pkg-config cargo-tauri yarn ];
 
