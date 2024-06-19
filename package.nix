@@ -1,9 +1,8 @@
 {
   lib,
-  fetchFromGitHub,
   fetchYarnDeps,
   gtk3,
-  libsoup,
+  glib-networking,
   mkYarnPackage,
   pkg-config,
   rustPlatform,
@@ -15,10 +14,8 @@
   openssl_3,
   librsvg,
   cargo-tauri,
-  yarn,
-  makeWrapper
+  makeWrapper,
 }:
-
 let
   pname = "dakko";
   version = "0.0.1";
@@ -31,7 +28,7 @@ let
 
     offlineCache = fetchYarnDeps {
       yarnLock = ./yarn.lock;
-      sha256 = "sha256-OMcY0qcRSlPDSQuXKLWhy1xr7zHbgBvwLA7fOWJBGck=";
+      sha256 = "sha256-iyIylYMqnsYTpW+D+fMs0AwrLZqcVeGN7SspyAFKyjE=";
     };
 
     packageJSON = ./package.json;
@@ -48,7 +45,6 @@ let
     dontInstall = true;
   };
 in
-
 rustPlatform.buildRustPackage {
   inherit version pname;
 
@@ -59,22 +55,27 @@ rustPlatform.buildRustPackage {
   };
 
   postPatch = ''
-    substituteInPlace tauri.conf.json --replace '"distDir": "../build"' '"distDir": "${frontend-build}/build"'
-    substituteInPlace tauri.conf.json --replace '"beforeBuildCommand": "yarn build",' '"beforeBuildCommand": "",'
-    substituteInPlace tauri.conf.json --replace '"beforeDevCommand": "yarn dev",' '"beforeDevCommand": "",'
+    substituteInPlace tauri.conf.json --replace-fail '"distDir": "../build"' '"distDir": "${frontend-build}/build"'
+    substituteInPlace tauri.conf.json --replace-fail '"beforeBuildCommand": "yarn build"' '"beforeBuildCommand": ""'
   '';
 
   buildType = "debug";
 
   buildPhase = ''
+    runHook preBuild
     cargo tauri build
+    runHook postBuild
   '';
 
   installPhase = ''
+    runHook preInstall
+
     mkdir -p $out/bin
-    mv target/release/dakko $out/bin/dakko_unwrapped
-    makeWrapper $out/bin/dakko_unwrapped $out/bin/dakko \
-      --set WEBKIT_DISABLE_COMPOSITING_MODE 1
+    makeWrapper target/release/dakko $out/bin/dakko \
+     --set WEBKIT_DISABLE_COMPOSITING_MODE 1 \
+     --prefix GIO_MODULE_DIR : ${glib-networking}/lib/gio/modules/
+
+    runHook postInstall
   '';
 
   buildInputs = [
@@ -86,17 +87,22 @@ rustPlatform.buildRustPackage {
     dbus
     openssl_3
     librsvg
+    glib-networking
+  ];
+
+  nativeBuildInputs = [
+    pkg-config
+    cargo-tauri
     makeWrapper
   ];
-  nativeBuildInputs = [ pkg-config cargo-tauri yarn ];
 
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "A [more] native[ly integrated] Fediverse client";
     homepage = "https://github.com/nullishamy/dakko";
-    license = licenses.osl3;
+    license = lib.licenses.osl3;
     mainProgram = "dakko";
-    maintainers = with maintainers; [ nullishamy ];
+    maintainers = with lib.maintainers; [ nullishamy ];
   };
 }
