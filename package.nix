@@ -89,13 +89,13 @@ rustPlatform.buildRustPackage {
     dbus
     openssl_3
     librsvg
-    makeWrapper
     glib-networking
   ];
 
   nativeBuildInputs = [
     pkg-config
     cargo-tauri
+    makeWrapper
   ];
 
   doCheck = false;
