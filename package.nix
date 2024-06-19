@@ -14,7 +14,6 @@
   openssl_3,
   librsvg,
   cargo-tauri,
-  yarn,
   makeWrapper,
 }:
 
@@ -30,7 +29,7 @@ let
 
     offlineCache = fetchYarnDeps {
       yarnLock = ./yarn.lock;
-      sha256 = "sha256-OMcY0qcRSlPDSQuXKLWhy1xr7zHbgBvwLA7fOWJBGck=";
+      sha256 = "sha256-iyIylYMqnsYTpW+D+fMs0AwrLZqcVeGN7SspyAFKyjE=";
     };
 
     packageJSON = ./package.json;
@@ -93,7 +92,6 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = [
     pkg-config
     cargo-tauri
-    yarn
   ];
 
   doCheck = false;
