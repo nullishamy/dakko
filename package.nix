@@ -16,7 +16,6 @@
   cargo-tauri,
   makeWrapper,
 }:
-
 let
   pname = "dakko";
   version = "0.0.1";
@@ -46,7 +45,6 @@ let
     dontInstall = true;
   };
 in
-
 rustPlatform.buildRustPackage {
   inherit version pname;
 
@@ -100,11 +98,11 @@ rustPlatform.buildRustPackage {
 
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "A [more] native[ly integrated] Fediverse client";
     homepage = "https://github.com/nullishamy/dakko";
-    license = licenses.osl3;
+    license = lib.licenses.osl3;
     mainProgram = "dakko";
-    maintainers = with maintainers; [ nullishamy ];
+    maintainers = with lib.maintainers; [ nullishamy ];
   };
 }
