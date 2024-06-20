@@ -20,6 +20,7 @@
 				type: 'timeline',
 				timeline: fromTimeline,
 				cachedStatuses,
+				scrollToPostIndex: cachedStatuses.findIndex((s) => s.id === status.id),
 				scrollToPostId: status.id
 			});
 		});
@@ -39,11 +40,11 @@
 		{hidden ? 'Show anyway' : 'Hide again'}
 	</button>
 	{#if !hidden}
-    <div class="place-self-start w-full">
-      <Status
-        {status}
-        onOpen={handleStatusOpen}
-      />
-    </div>
+		<div class="place-self-start w-full">
+			<Status
+				{status}
+				onOpen={handleStatusOpen}
+			/>
+		</div>
 	{/if}
 </div>

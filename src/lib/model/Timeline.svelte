@@ -16,6 +16,7 @@
 	import { firstPostInHome } from './timeline-store';
 	import { Pulse } from 'svelte-loading-spinners';
 	import { LOADER_COLOR } from '..';
+	import VirtualList from '../generic/virtual-list/VirtualList.svelte';
 
 	export let timeline: api.InstanceTimeline;
 
@@ -25,10 +26,10 @@
 	const replyMap = new Map<string, api.Account>();
 	const knownMarkers = new Set<string>();
 
-	export let scrollToPostId: string | undefined;
+	export let scrollToPostIndex: number | undefined = undefined;
+	export let scrollToPostId: string | undefined = undefined;
 
-	let scrollTo: Element;
-	let showLoader = false;
+	let virtualList: VirtualList<api.Status, 'id'>;
 
 	const fetchStatuses = (startAt?: string, append?: true, limit = 25): Promise<void> => {
 		return invoke(`get_${timeline}_timeline`, { startAt, limit }).then((_res) => {
@@ -55,13 +56,13 @@
 		return posts as number;
 	};
 
-	let openedStatus: api.Status | undefined;
 	const handleStatusOpen = async (status: api.Status) => {
 		await openStatus(status, content, () => {
 			content.set({
 				type: 'timeline',
 				timeline,
 				cachedStatuses: statuses,
+				scrollToPostIndex: statuses.findIndex((s) => s.id === status.id),
 				scrollToPostId: status.id
 			});
 		});
@@ -74,27 +75,25 @@
 			try {
 				await fetchStatuses($firstPostInHome);
 			} catch (err) {
-				showError(content, err, "when fetching timeline")
-				return
+				showError(content, err, 'when fetching timeline');
+				return;
 			}
 
 			if (!$firstPostInHome) {
 				firstPostInHome.set(statuses[0].id);
 			}
 		}
-
-		scrollTo?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 	});
 
 	setInterval(async () => {
 		if ($firstPostInHome) {
 			try {
-				statusesToCatchup = await fetchCatchupAmount($firstPostInHome);
+				// statusesToCatchup = await fetchCatchupAmount($firstPostInHome);
 			} catch (err) {
-				showError(content, err, "when fetching timeline catchup")
+				showError(content, err, 'when fetching timeline catchup');
 			}
 		}
-	}, 10_000);
+	}, 15_000);
 
 	const timelines: api.InstanceTimeline[] = [
 		api.InstanceTimeline.HOME,
@@ -102,8 +101,6 @@
 		api.InstanceTimeline.BUBBLE,
 		api.InstanceTimeline.KNOWN
 	];
-
-	let element: HTMLElement;
 </script>
 
 <div
@@ -119,6 +116,9 @@
 				on:click={() => {
 					timeline = maybeNewTimeline;
 					statuses = [];
+					knownMarkers.clear()
+					scrollToPostId = undefined
+					scrollToPostIndex = undefined
 					fetchStatuses();
 				}}
 			>
@@ -131,7 +131,10 @@
 	<button
 		on:click={async () => {
 			statuses = [];
+			scrollToPostIndex = undefined
+			scrollToPostId = undefined
 			await fetchStatuses();
+			knownMarkers.clear();
 			firstPostInHome.set(statuses[0].id);
 		}}
 		class="flex flex-row items-end gap-2"
@@ -146,66 +149,55 @@
 	</button>
 </div>
 
-<div class="mt-2 flex flex-col gap-8 m-1">
-	{#each statuses as status, i}
-		{@const [filterResult, triggeredFilter] = $filters.filterStatus(status)}
-		{#if filterResult == 'show'}
-			<Status
-				{status}
-				replyTo={replyMap.get(status.id)}
-				highlighted={status.id === scrollToPostId}
-				onOpen={handleStatusOpen}
-			/>
-		{:else if filterResult === 'warning' && triggeredFilter}
-			<FilterWarning
-				filter={triggeredFilter}
-				{status}
-				fromTimeline={timeline}
-				cachedStatuses={statuses}
-			/>
-		{/if}
-		{#if status.id == scrollToPostId}
-			<div
-				bind:this={scrollTo}
-				class="w-full h-1"
-			/>
-		{/if}
-		{#if i == statuses.length - 10}
-			<div
-				class="h-2 w-12"
-				bind:this={element}
-			></div>
-		{/if}
-	{/each}
-
-	{#if showLoader || !statuses.length}
-		<span class="text-lg flex flex-row items-center gap-2 place-self-center">
-			{showLoader ? 'Slow down! Loading more posts..' : 'Fetching your timeline..'}	
-			<Pulse
-				color={LOADER_COLOR}
-				size={30}
-			/>
-		</span>
+<VirtualList
+	data={statuses}
+	key={'id'}
+	start={scrollToPostIndex ?? 0}
+	footerItemStyles="place-self-center mt-4"
+	scrollWrapperStyles="flex flex-col gap-8"
+	rootStyles="hide-scrollbar flex flex-col h-full mt-2"
+	bind:this={virtualList}
+	on:bottom={() => {
+		const lastId = statuses[statuses.length - 1]?.id;
+		if (knownMarkers.has(lastId)) {
+			console.log('Skipping known last id', lastId);
+			return;
+		}
+		knownMarkers.add(lastId);
+		if (lastId) {
+			fetchStatuses(lastId, true, 25).then(() => {
+				setTimeout(() => virtualList.scrollToOffset(virtualList.getOffset() + 1), 3)
+			})
+			console.log('Fetching from', lastId);
+		}
+	}}
+	let:data
+>
+	{@const [filterResult, triggeredFilter] = $filters.filterStatus(data)}
+	{#if filterResult == 'show'}
+		<Status
+			status={data}
+			replyTo={replyMap.get(data.id)}
+			highlighted={data.id === scrollToPostId}
+			onOpen={handleStatusOpen}
+		/>
+	{:else if filterResult === 'warning' && triggeredFilter}
+		<FilterWarning
+			filter={triggeredFilter}
+			status={data}
+			fromTimeline={timeline}
+			cachedStatuses={statuses}
+		/>
 	{/if}
 
-	{#if !openedStatus}
-		<IntersectionObserver
-			{element}
-			on:intersect={() => {
-				showLoader = true;
-				const lastId = statuses[statuses.length - 1]?.id;
-				if (knownMarkers.has(lastId)) {
-					console.log('Skipping known last id', lastId);
-					return;
-				}
-				knownMarkers.add(lastId);
-				if (lastId) {
-					fetchStatuses(lastId, true, 25).then(() => {
-						showLoader = false;
-					});
-					console.log('Fetching from', lastId);
-				}
-			}}
-		></IntersectionObserver>
-	{/if}
-</div>
+	<span
+		slot="footer"
+		class="text-lg flex flex-row items-center gap-2"
+	>
+		{statuses.length ? 'Slow down! Loading more posts..' : 'Fetching your timeline..'}
+		<Pulse
+			color={LOADER_COLOR}
+			size={30}
+		/>
+	</span>
+</VirtualList>

@@ -47,6 +47,7 @@ fn main() {
             timeline::get_markers,
             timeline::save_markers,
             timeline::get_home_catchup,
+            timeline::get_public_catchup,
             relationship::get_relationships,
             relationship::block_user,
             relationship::unblock_user,

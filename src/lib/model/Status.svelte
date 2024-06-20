@@ -178,6 +178,10 @@
 				<StatusPoll poll={status.poll} />
 			{/if}
 
+			{#if reblog?.poll}
+				<StatusPoll poll={reblog.poll} />
+			{/if}
+
 			<StatusButtons
 				{status}
 				bind:quoteOpen

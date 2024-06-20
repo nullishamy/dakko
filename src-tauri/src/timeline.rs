@@ -61,6 +61,25 @@ pub async fn get_home_catchup(
 }
 
 #[tauri::command]
+pub async fn get_public_catchup(
+    since_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<usize, error::DakkoError> {
+    assert!(state.has_logged_in());
+
+    let client = state.client.read();
+    let client = client.as_ref().unwrap();
+
+    let options = megalodon::megalodon::GetPublicTimelineInputOptions {
+        since_id: Some(since_id),
+        ..Default::default()
+    };
+
+    let res = client.get_public_timeline(Some(&options)).await?;
+    Ok(res.json().len())
+}
+
+#[tauri::command]
 pub async fn get_home_timeline(
     start_at: Option<String>,
     limit: u32,

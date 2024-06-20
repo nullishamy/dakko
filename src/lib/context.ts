@@ -6,6 +6,7 @@ export interface TimelineContent {
 	type: 'timeline';
 	timeline: api.InstanceTimeline;
 	cachedStatuses: api.Status[];
+	scrollToPostIndex?: number;
 	scrollToPostId?: string;
 }
 

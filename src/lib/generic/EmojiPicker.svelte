@@ -2,7 +2,6 @@
 	import * as api from '$lib/api';
 	import { onMount } from 'svelte';
 	import { emojiStore } from './emoji-store';
-	import { eachMonthOfInterval } from 'date-fns';
 	import { Pulse } from 'svelte-loading-spinners';
 	import { LOADER_COLOR } from '..';
 

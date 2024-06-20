@@ -18,6 +18,7 @@
 	<Timeline
 		timeline={$content.timeline}
 		statuses={$content.cachedStatuses}
+		scrollToPostIndex={$content.scrollToPostIndex}
 		scrollToPostId={$content.scrollToPostId}
 	/>
 {:else if $content?.type == 'status'}
