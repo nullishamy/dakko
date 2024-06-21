@@ -34,17 +34,36 @@
       devShells = forEachSystem (
         { pkgs, ... }:
         {
-          default = pkgs.mkShell {
-            packages = with pkgs; [
-              (rust-bin.stable.latest.default.override {
-                extensions = [
-                  "rust-src"
-                  "rust-analyzer"
-                  "clippy"
+          default =
+            let
+              libPath =
+                with pkgs;
+                lib.makeLibraryPath [
+                  libGL
+                  libxkbcommon
+                  wayland
+                  xorg.libX11
+                  xorg.libXcursor
+                  xorg.libXi
+                  xorg.libXrandr
                 ];
-              })
-            ];
-          };
+            in
+            # ...
+            pkgs.mkShell {
+              env = {
+                LD_LIBRARY_PATH = libPath;
+              };
+              packages = with pkgs; [
+                xorg.libxcb
+                (rust-bin.stable.latest.default.override {
+                  extensions = [
+                    "rust-src"
+                    "rust-analyzer"
+                    "clippy"
+                  ];
+                })
+              ];
+            };
         }
       );
 

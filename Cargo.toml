@@ -4,3 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+clap = { version = "4.5.7", features = ["derive"] }
+egui = "0.27.2"
+eframe = { version = "0.27.0", default-features = false, features = [
+  "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
+  "default_fonts", # Embed the default egui fonts.
+  "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+  "persistence",   # Enable restoring app state when restarting the app.
+] }
+serde = { version = "1", features = ["derive"] }
+megalodon = "0.13.7"
+tokio = { version = "1", features = ["net", "rt-multi-thread"] }
+open = "5.1.4"
+axum = { version = "0.7.5", features = ["macros"] }
+egui_extras = { version = "*", features = ["all_loaders"] }
+image = { version = "0.24", features = ["jpeg", "png"] }
+egui_infinite_scroll = "0.3.0"
+html2text = "0.12.5"
