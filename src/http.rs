@@ -29,8 +29,6 @@ impl HttpState {
         self.tx.send(res).unwrap();
         self.egui_ctx.as_ref().unwrap().request_repaint();
     }
-
-    fn handle(req: HttpRequest) {}
 }
 
 #[axum::debug_handler]

@@ -1,10 +1,23 @@
 use megalodon::entities;
 
-use super::content::ContentComponent;
+use super::{composition::CompositionArea, content::ContentComponent};
 
-struct StatusControls {}
+#[derive(Debug)]
+struct StatusControls {
+    reply: CompositionArea,
+    reply_open: bool,
+    author: String,
+    id: String,
+}
 impl StatusControls {
-    fn render(&self, ui: &mut egui::Ui) {
+    fn render(&mut self, ui: &mut egui::Ui) {
+        if self.reply_open {
+            egui::Window::new(format!("reply to {}", self.author))
+                .id(self.id.clone().into())
+                .show(ui.ctx(), |ui| {
+                    self.reply.render(ui);
+                });
+        }
         let mut frame = egui::Frame::default()
             .outer_margin(egui::Margin {
                 top: 5.0,
@@ -13,7 +26,9 @@ impl StatusControls {
             .begin(ui);
         {
             frame.content_ui.horizontal(|ui| {
-                ui.button("reply");
+                if ui.button("reply").clicked() {
+                    self.reply_open = true;
+                }
                 ui.add_space(2.0);
                 ui.button("quote");
                 ui.add_space(2.0);
@@ -92,7 +107,7 @@ impl StatusContent {
         }
 
         if (has_spoilers && self.show_spoilers) || !has_spoilers {
-            self.content.render(ui, ui.available_width() as usize);
+            self.content.render(ui);
             self.attachments.render(ui);
         }
     }
@@ -101,6 +116,7 @@ impl StatusContent {
 #[derive(Debug)]
 pub struct StatusComponent {
     status: entities::Status,
+    controls: StatusControls,
     content: StatusContent,
     sensitive_open: bool,
 }
@@ -116,6 +132,12 @@ impl StatusComponent {
 
         Self {
             status,
+            controls: StatusControls {
+                reply: CompositionArea::new(),
+                reply_open: false,
+                author: status_or_reblog.account.display_name.clone(),
+                id: status_or_reblog.id.clone()
+            },
             content: StatusContent {
                 content: ContentComponent::new(html),
                 show_spoilers: false,
@@ -138,7 +160,7 @@ impl StatusComponent {
         let reblog = status.reblog.as_ref();
         let status_or_reblog = reblog.map(|s| *s.clone()).unwrap_or(status.clone());
 
-        if let Some(reblog) = reblog {
+        if reblog.is_some() {
             let mut frame = egui::Frame::default()
                 .outer_margin(egui::Margin {
                     left: 25.0,
@@ -200,9 +222,7 @@ impl StatusComponent {
                     });
 
                     self.content.render(ui);
-
-                    let controls = StatusControls {};
-                    controls.render(ui);
+                    self.controls.render(ui);
                 })
             });
         }

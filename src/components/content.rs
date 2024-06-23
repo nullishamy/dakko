@@ -1,5 +1,3 @@
-use html2text::config;
-
 #[derive(Debug)]
 pub struct ContentComponent {
     content: String,
@@ -10,7 +8,7 @@ impl ContentComponent {
         Self { content: html }
     }
 
-    pub fn render(&mut self, ui: &mut egui::Ui, width: usize) {
-        ui.label(&self.content);
+    pub fn render(&mut self, ui: &mut egui::Ui) {
+        ui.label(egui::RichText::new(&self.content));
     }
 }
