@@ -160,6 +160,11 @@ pub fn handle(state: &Arc<RwLock<HttpState>>, req: HttpRequest, rt: &Runtime) {
             let mut state = rt.block_on(state.write());
             state.egui_ctx = Some(ctx);
         }
+        HttpRequest::PostStatus(opts, content) => {
+            let state = rt.block_on(state.read());
+            let client = state.client.as_ref().unwrap();
+            rt.block_on(client.post_status(content, Some(&opts)));
+        },
     }
 }
 
@@ -172,6 +177,7 @@ pub enum HttpRequest {
     Configure(app::BootstrapState),
     Authenticate(app::ClientState, app::AuthState),
     RequestTimeline(app::Timeline, Option<String>),
+    PostStatus(megalodon::megalodon::PostStatusInputOptions, String),
     RequestSelf,
 }
 

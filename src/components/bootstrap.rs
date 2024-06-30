@@ -6,7 +6,7 @@ impl BootstrapComponent {
         ui.label("let's get you logged in");
         ui.horizontal(|ui| {
             ui.label("instance url:");
-            let instance_url = ui.add(
+            ui.add(
                 egui::text_edit::TextEdit::singleline(&mut app.bootstrap.base_url)
                     .hint_text("https://labyrinth.zone"),
             );

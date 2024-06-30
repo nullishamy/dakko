@@ -1,6 +1,11 @@
+use core::fmt;
+
 use megalodon::entities;
 
-use super::{composition::CompositionArea, content::ContentComponent};
+use super::{
+    composition::{CompositionArea, PostableContent},
+    content::ContentComponent,
+};
 
 #[derive(Debug)]
 struct StatusControls {
@@ -14,6 +19,7 @@ impl StatusControls {
         if self.reply_open {
             egui::Window::new(format!("reply to {}", self.author))
                 .id(self.id.clone().into())
+                .open(&mut self.reply_open)
                 .show(ui.ctx(), |ui| {
                     self.reply.render(ui);
                 });
@@ -57,15 +63,18 @@ impl StatusAttachments {
             return;
         }
 
-        ui.horizontal_centered(|ui| {
-            if attachments_sensitive && !self.sensitive_open {
+        if attachments_sensitive && !self.sensitive_open {
+            ui.centered_and_justified(|ui| {
+                ui.set_min_height(30.0);
                 let show_images = ui.button("images marked as sensitive, click to show");
                 if show_images.clicked() {
                     self.sensitive_open = true;
                 }
-                return;
-            }
+            });
+            return;
+        }
 
+        ui.horizontal_centered(|ui| {
             for attachment in &status.media_attachments {
                 match &attachment.r#type {
                     entities::attachment::AttachmentType::Image => {
@@ -97,13 +106,17 @@ impl StatusContent {
         let has_spoilers = !self.status.spoiler_text.is_empty();
 
         if !spoiler_text.is_empty() {
-            ui.label(egui::RichText::new(spoiler_text.clone()).italics());
-            ui.separator();
-            if self.show_spoilers && ui.button("hide content").clicked() {
-                self.show_spoilers = false;
-            } else if !self.show_spoilers && ui.button("show content").clicked() {
-                self.show_spoilers = true;
-            }
+            ui.vertical_centered_justified(|ui| {
+                ui.label(egui::RichText::new(spoiler_text.clone()).italics());
+                ui.separator();
+                if self.show_spoilers && ui.button("hide content").clicked() {
+                    self.show_spoilers = false;
+                    self.attachments.sensitive_open = false;
+                } else if !self.show_spoilers && ui.button("show content").clicked() {
+                    self.show_spoilers = true;
+                }
+                ui.add_space(2.0);
+            });
         }
 
         if (has_spoilers && self.show_spoilers) || !has_spoilers {
@@ -113,15 +126,27 @@ impl StatusContent {
     }
 }
 
-#[derive(Debug)]
 pub struct StatusComponent {
     status: entities::Status,
     controls: StatusControls,
+    on_reply: Box<dyn FnMut(PostableContent) + 'static>,
     content: StatusContent,
     sensitive_open: bool,
 }
+
+impl fmt::Debug for StatusComponent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StatusComponent")
+            .field("status", &self.status)
+            .field("controls", &self.controls)
+            .field("content", &self.content)
+            .field("sensitive_open", &self.sensitive_open)
+            .finish()
+    }
+}
+
 impl StatusComponent {
-    pub fn new(status: entities::Status) -> StatusComponent {
+    pub fn new(status: entities::Status, on_reply: impl FnMut(PostableContent) + 'static + Clone) -> StatusComponent {
         let reblog = status.reblog.as_ref();
         let status_or_reblog = reblog.map(|s| *s.clone()).unwrap_or(status.clone());
         let html = status_or_reblog
@@ -133,10 +158,13 @@ impl StatusComponent {
         Self {
             status,
             controls: StatusControls {
-                reply: CompositionArea::new(),
+                reply: CompositionArea::new(
+                    on_reply.clone(),
+                    Some(status_or_reblog.id.clone()),
+                ),
                 reply_open: false,
                 author: status_or_reblog.account.display_name.clone(),
-                id: status_or_reblog.id.clone()
+                id: status_or_reblog.id.clone(),
             },
             content: StatusContent {
                 content: ContentComponent::new(html),
@@ -148,6 +176,7 @@ impl StatusComponent {
                 },
             },
             sensitive_open: false,
+            on_reply: Box::new(on_reply),
         }
     }
 

@@ -9,7 +9,10 @@ use megalodon::{entities, oauth::TokenData};
 use serde::{Deserialize, Serialize};
 use std::net;
 
-use crate::{components::{bootstrap::BootstrapComponent, status::StatusComponent}, http::{HttpRequest, HttpResponse}};
+use crate::{
+    components::{bootstrap::BootstrapComponent, status::StatusComponent},
+    http::{HttpRequest, HttpResponse},
+};
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -180,9 +183,7 @@ impl MainApp {
                     base_url: self.bootstrap.base_url.clone(),
                     instance_type: self.bootstrap.instance_type.clone(),
                 });
-                self.send_request(HttpRequest::LaunchServer(
-                    self.bootstrap.callback_addr,
-                ));
+                self.send_request(HttpRequest::LaunchServer(self.bootstrap.callback_addr));
                 self.send_request(HttpRequest::OpenURL(url));
             }
             HttpResponse::TokenData(token) => {
@@ -201,7 +202,20 @@ impl MainApp {
                 }
             }
             HttpResponse::RequestTimeline(timeline, statuses) => {
-                let statuses = statuses.into_iter().map(StatusComponent::new).collect::<Vec<_>>();
+                let sender = self.http.as_ref().unwrap().0.clone();
+                let statuses = statuses
+                    .into_iter()
+                    .map(|status| {
+                        let sender = sender.clone();
+                        StatusComponent::new(status, move |reply| {
+                            let opts = megalodon::megalodon::PostStatusInputOptions {
+                                in_reply_to_id: reply.reply_id,
+                                ..Default::default()
+                            };
+                            sender.send(HttpRequest::PostStatus(opts, reply.content)).unwrap();
+                        })
+                    })
+                    .collect::<Vec<_>>();
                 let active = self.active_state_mut();
                 if let Some(tl) = active.timelines.get_mut(&timeline) {
                     tl.statuses.extend(statuses);
@@ -250,7 +264,6 @@ impl MainApp {
 
     fn main_panel(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
-            ui.heading("dakko");
             if self.is_logged_in() && self.has_active_state() {
                 self.load_timeline(Timeline::Home);
             } else if let Some(auth_url) = &self.bootstrap.auth_url {
