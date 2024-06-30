@@ -1,6 +1,6 @@
 {
     "rust-analyzer.checkOnSave": false,
-    "rust-analyzer.check.command": "check",
+    // "rust-analyzer.check.command": "clippy",
     "presentation-mode.configBackup": {
         "editor.fontSize": "undefined",
         "terminal.integrated.fontSize": "undefined",
