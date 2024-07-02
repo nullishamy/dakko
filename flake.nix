@@ -36,63 +36,37 @@
         {
           default =
             let
-              libraries = with pkgs; [
-                webkitgtk
-                gtk3
-                cairo
-                gdk-pixbuf
-                glib
-                dbus
-                openssl_3
-                librsvg
-              ];
-
-              packages = with pkgs; [
-                curl
-                wget
-                pkg-config
-                dbus
-                openssl_3
-                glib
-                gtk3
-                libsoup
-                webkitgtk
-                librsvg
-              ];
+              libPath =
+                with pkgs;
+                lib.makeLibraryPath [
+                  libGL
+                  libxkbcommon
+                  wayland
+                  xorg.libX11
+                  xorg.libXcursor
+                  xorg.libXi
+                  xorg.libXrandr
+                ];
             in
+            # ...
             pkgs.mkShell {
               env = {
-                LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH";
-                XDG_DATA_DIRS = "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS";
-                GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules/";
+                LD_LIBRARY_PATH = libPath;
               };
-
-              packages =
-                with pkgs;
-                [
-                  nodejs_20
-                  nodePackages.yarn
-                  (rust-bin.stable.latest.default.override {
-                    extensions = [
-                      "rust-src"
-                      "rust-analyzer"
-                      "clippy"
-                    ];
-                  })
-                ]
-                ++ packages;
+              packages = with pkgs; [
+                xorg.libxcb
+                (rust-bin.stable.latest.default.override {
+                  extensions = [
+                    "rust-src"
+                    "rust-analyzer"
+                    "clippy"
+                  ];
+                })
+              ];
             };
         }
       );
 
       formatter = forEachSystem ({ pkgs, ... }: pkgs.nixfmt-rfc-style);
-
-      packages = forEachSystem (
-        { pkgs, system }:
-        {
-          dakko = pkgs.callPackage ./package.nix { };
-          default = self.packages.${system}.dakko;
-        }
-      );
     };
 }
